@@ -122,8 +122,9 @@ def CameraStreamerThread(frameQueue, directiveQueue, preProcessingQueue):
     if os.name == 'nt':
         capDev = cv.VideoCapture(0)
     else:
+        capDev = cv.VideoCapture(0)
         print("os mismatch")
-        exit(1)
+        # exit(1)
 
     if not capDev.isOpened():
         print("cannot open camera")
