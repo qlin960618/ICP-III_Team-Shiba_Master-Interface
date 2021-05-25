@@ -120,11 +120,14 @@ class CalibrationApp():
 
 def CameraStreamerThread(frameQueue, directiveQueue, preProcessingQueue):
     if os.name == 'nt':
+        print("Windows env")
+        capDev = cv.VideoCapture(0)
+    elif os.name == 'posix':
+        print("Unix env")
         capDev = cv.VideoCapture(0)
     else:
-        capDev = cv.VideoCapture(0)
-        print("os mismatch")
-        # exit(1)
+        print("os mismatch: %s"%os.name)
+        exit(1)
 
     if not capDev.isOpened():
         print("cannot open camera")
