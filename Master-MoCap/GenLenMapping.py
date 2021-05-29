@@ -52,17 +52,53 @@ for i in range(GRID_N_POINTS):
     dy = yInd[i]*gridDistance
     alpha[i] = math.atan(dx/gridDistance)
     beta[i]  = math.atan(dy/gridDistance)
-    print("ang for X:%d, Y:%d, alp:%.10f, bet:%.10f"%(xInd[i], yInd[i], alpha[i], beta[i]))
+    # print("ang for X:%d, Y:%d, alp:%.10f, bet:%.10f"%(xInd[i], yInd[i], alpha[i], beta[i]))
 
 
 ##begin Interpolate code
-f_beta = interpolate.interp2d(xPos, yPos, beta, 'quintic')
-f_alpha = interpolate.interp2d(xPos, yPos, alpha, 'linear')
+# f_alpha = interpolate.interp2d(xPos, yPos, alpha, 'linear')
+# f_beta = interpolate.interp2d(xPos, yPos, beta, 'linear')
+f_alpha = interpolate.Rbf(xPos, yPos, alpha, function="linear")
+f_beta = interpolate.Rbf(xPos, yPos, beta, function="linear")
 
+
+
+
+# import matplotlib.pyplot as plt
+# xnew = np.arange(0,1279,2)
+# ynew = np.arange(-5.01, 5.01, 1e-2)
+# znew = f_alpha(xnew, ynew)
+# plt.plot(xPos, z[0, :], 'ro', xnew, znew[0, :], 'b-')
+# plt.show()
 
 import matplotlib.pyplot as plt
-xnew = np.arange(0, 1279, 1)
-ynew = np.arange(0, 719, 1)
-znew = f_alpha(xnew, ynew)
-plt.plot(xPos, alpha, 'r*', xnew, znew[0, :], 'b')
+xnew , ynew = np.meshgrid(np.linspace(0,1279,50),np.linspace(0,719,50))
+ynew = ynew.ravel()
+xnew = xnew.ravel()
+alpha_new = f_alpha(xnew, ynew)
+beta_new = f_beta(xnew, ynew)
+
+print(xnew.shape)
+print(ynew.shape)
+print(beta_new.shape)
+
+fig = plt.figure(figsize = (10, 7))
+ax = plt.axes(projection ="3d")
+# Creating plot
+ax.scatter3D(xnew, ynew, beta_new, color="green")
+ax.scatter3D(xnew, ynew, alpha_new, color="blue")
+
 plt.show()
+
+
+
+# import matplotlib.pyplot as plt
+# xnew , ynew = np.meshgrid(np.linspace(0,1279,20),np.linspace(0,719,20))
+# ynew = ynew.ravel()
+# xnew = xnew.ravel()
+# # print(xnew.shape)
+# z_xnew = f_alpha(xnew, ynew)
+# z_ynew = f_beta(xnew, ynew)
+# plt.quiver(xnew,ynew,z_xnew,z_ynew,linewidths=1)
+# # plt.plot(xPos, alpha, 'r*', xnew, znew[0, :], 'b')
+# plt.show()

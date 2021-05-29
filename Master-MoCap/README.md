@@ -39,7 +39,7 @@
 
     - int -- ballID
       - The id of the ball to locate. the ID can be hardcoded with color. Ex.
-      Green=1, Red=2
+      Green=0, Red=1
     - return: bool, int, int -- ball_present, x, y
       - Boolean of if the ball with given ID is in frame
       - x, y pixel of where the ball with given ID is located in the camera.
