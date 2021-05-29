@@ -11,13 +11,13 @@ import PIL.Image
 import PIL.ImageTk
 import cv2 as cv
 
-FRAME_TIME = 1.0 / 10
-IM_RESOLUTION = 640
+FRAME_TIME = 1.0 / 20
+IM_RESOLUTION = 960
 
 TESTING = False
 
-GRID_X_SIZE=7
-GRID_Y_SIZE=5
+GRID_X_SIZE=21
+GRID_Y_SIZE=11
 GRID_N_POINTS=GRID_X_SIZE*GRID_Y_SIZE
 GRID_DEFAULT_SIZE=5
 
@@ -38,7 +38,7 @@ def main():
     preProcessingQueue = Queue()
 
     if not TESTING:
-        camera_p = Process(target=CameraStreamerThread, args=(1, frameQueue, directiveQueue, preProcessingQueue))
+        camera_p = Process(target=CameraStreamerThread, args=(0, frameQueue, directiveQueue, preProcessingQueue))
         camera_p.start()
 
     App = CalibrationApp(tk.Tk(), frameQueue, directiveQueue, preProcessingQueue)

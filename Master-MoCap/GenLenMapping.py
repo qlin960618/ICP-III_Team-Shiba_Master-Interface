@@ -1,13 +1,10 @@
 
 import os
 import numpy as np
-from multiprocessing import Process, Queue
-from queue import Empty
-from enum import Enum
 import time
-import tkinter as tk
-from functools import partial
 import math
+# import mpmath
+from scipy import interpolate
 
 import PIL.Image
 import PIL.ImageTk
@@ -38,19 +35,25 @@ with open(CONFIG_FILE_NAME,'r') as f_config:
 
 
 
-xInd = [int(i) for i in xIndStr]
-yInd = [int(i) for i in yIndStr]
-xPos = [int(i) for i in xPosStr]
-yPos = [int(i) for i in yPosStr]
+xInd = np.array([int(i) for i in xIndStr])
+yInd = np.array([int(i) for i in yIndStr])
+xPos = np.array([int(i) for i in xPosStr])
+yPos = np.array([int(i) for i in yPosStr])
 
 #alpha: angle projected onto xz plane
 alpha=[0 for i in range(GRID_N_POINTS)]
 #beta: angle projected onto yz plane
 beta=[0 for i in range(GRID_N_POINTS)]
 
+
+
 for i in range(GRID_N_POINTS):
     dx = xInd[i]*gridDistance
     dy = yInd[i]*gridDistance
     alpha[i] = math.atan(dx/gridDistance)
     beta[i]  = math.atan(dy/gridDistance)
-    print("ang for X:%d, Y:%d, alp:%.3f, bet:%.3f"%(xInd[i], yInd[i], alpha[i], beta[i]))
+    print("ang for X:%d, Y:%d, alp:%.10f, bet:%.10f"%(xInd[i], yInd[i], alpha[i], beta[i]))
+
+
+##begin Interpolate code
+f_beta = interpolate.interp2d(xPos, yPos, beta,)
