@@ -41,9 +41,9 @@ xPos = np.array([int(i) for i in xPosStr])
 yPos = np.array([int(i) for i in yPosStr])
 
 #alpha: angle projected onto xz plane
-alpha=[0 for i in range(GRID_N_POINTS)]
+alpha=np.zeros(GRID_N_POINTS)
 #beta: angle projected onto yz plane
-beta=[0 for i in range(GRID_N_POINTS)]
+beta=np.zeros(GRID_N_POINTS)
 
 
 
@@ -56,4 +56,13 @@ for i in range(GRID_N_POINTS):
 
 
 ##begin Interpolate code
-f_beta = interpolate.interp2d(xPos, yPos, beta,)
+f_beta = interpolate.interp2d(xPos, yPos, beta, 'quintic')
+f_alpha = interpolate.interp2d(xPos, yPos, alpha, 'linear')
+
+
+import matplotlib.pyplot as plt
+xnew = np.arange(0, 1279, 1)
+ynew = np.arange(0, 719, 1)
+znew = f_alpha(xnew, ynew)
+plt.plot(xPos, alpha, 'r*', xnew, znew[0, :], 'b')
+plt.show()
