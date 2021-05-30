@@ -1,6 +1,6 @@
 # Motion Capture Master Interface
 
-## Class: CameraReader
+## Class: BallTracker
 
 > This class object will handle operation of each camera. That mean for a three
  cameras motion capture setup, the main program will instantiate three instances
