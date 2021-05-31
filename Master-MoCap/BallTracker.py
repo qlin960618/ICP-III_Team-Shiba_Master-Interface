@@ -27,16 +27,16 @@ SHOW_REALTIME = True
 INITIALIZATION_TIMEOUT = 100
 CIRCLE_R_THRESHOLD = 10
 
-#in format of Lower H, S, V
-#             Upper H, S, V
-DEFAULT_greenLimit = [[66, 179, 101], [101, 255, 255]]
-DEFAULT_redLimit = [[118, 95, 116], [189, 255, 255]]
-
-INTERPOLORX_FILE_NAME = "./camera_config/lens_mapx.sciobj"
-INTERPOLORY_FILE_NAME = "./camera_config/lens_mapy.sciobj"
-##### Determined Using the ColorRanger Script
-
 def main():
+
+    #in format of Lower H, S, V
+    #             Upper H, S, V
+    DEFAULT_greenLimit = [[66, 179, 101], [101, 255, 255]]
+    DEFAULT_redLimit = [[118, 95, 116], [189, 255, 255]]
+
+    INTERPOLORX_FILE_NAME = "./camera_config/lens_mapx.sciobj"
+    INTERPOLORY_FILE_NAME = "./camera_config/lens_mapy.sciobj"
+    ##### Determined Using the ColorRanger Script
 
     ##event for monitoring error
     eError = mp.Event()
