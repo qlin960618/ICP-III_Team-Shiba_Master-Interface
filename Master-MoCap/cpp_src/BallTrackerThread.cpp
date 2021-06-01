@@ -1,9 +1,12 @@
 #include <opencv2/opencv.hpp>
 #include <opencv2/core/ocl.hpp>
 #include <opencv2/core/utility.hpp>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
 
-// using namespace cv;
-// using namespace std;
+
 
 // Convert to string
 #define SSTR( x ) static_cast< std::ostringstream & >( \
@@ -11,7 +14,6 @@
 
 #define DEFAULT_VIDEO_WIDTH 1280
 #define DEFAULT_VIDEO_HEIGHT 720
-
 
 
 int getMaxAreaCountourID(std::vector<std::vector<cv::Point>> contours){
@@ -27,9 +29,41 @@ int getMaxAreaCountourID(std::vector<std::vector<cv::Point>> contours){
     return maxAreaCountourID;
 }
 
+bool send_udp(int srcPort, int destPort, const void * packet_data, int p_size){
+    sockaddr_in addr;
+    addr.sin_family = AF_INET;
+    addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+    addr.sin_port = htons((unsigned short)destPort);
+
+    int sent_bytes = sendto(srcPort, (const char*)packet_data,
+                        p_size, 0, (sockaddr*)&addr,
+                        sizeof(sockaddr_in));
+    if(sent_bytes != p_size)
+    {
+        return false;
+    }
+    return true;
+}
+
+int recv_udp(int srcPort, void * packet_data, int max_packet_size){
+    sockaddr_in from;
+    socklen_t fromLength = sizeof(from);
+
+    int byte=recvfrom(srcPort, (char*)packet_data, max_packet_size,
+                0, (sockaddr*)&from, &fromLength);
+
+    return byte;
+}
+
+
 
 int main(int argc, char **argv)
 {
+
+    int recvPort=2220;
+    int sendPort=1003;
+
+
     bool show_REALTIME = false;
 
     auto ball_0_low = cv::Scalar(66, 179, 101);
@@ -37,10 +71,43 @@ int main(int argc, char **argv)
     auto ball_1_low = cv::Scalar(118, 95, 116);
     auto ball_1_high = cv::Scalar(189, 255, 255);
 
-    cv::VideoCapture video(0);
+    //////////////////////OPENING SOCKET
+    int hSock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+    if (hSock<=0){
+        std::cout << "failled to open socket" << std::endl;
+        return 0;
+    }
+    sockaddr_in address;
+    address.sin_family = AF_INET;
+    address.sin_addr.s_addr = INADDR_ANY;
+    address.sin_port = htons((unsigned short)recvPort);
 
+    if( bind(hSock,
+        (const sockaddr*) &address,
+        sizeof(sockaddr_in))<0 ){
+
+            std::cout << "Failled to bind Socket" <<std::endl;
+            return 0;
+        }
+    // std::cout << "socket opened" << std::endl;
+    // int nonBlocking=0;
+    // if(fcntl(hSock, F_SETFL, O_NONBLOCK, nonBlocking) == -1){
+    //     std::cout << "Failed to set non-blocking" << std::endl;
+    // }
+    //creating sent buffer
+    char sendBuff[100];
+    //////////////////////OPENING SOCKET
+
+    cv::VideoCapture video(0);
     video.set(cv::CAP_PROP_FRAME_WIDTH, DEFAULT_VIDEO_WIDTH);
     video.set(cv::CAP_PROP_FRAME_HEIGHT, DEFAULT_VIDEO_HEIGHT);
+
+    int vidWidth = video.get(cv::CAP_PROP_FRAME_WIDTH);
+    int vidHeight = video.get(cv::CAP_PROP_FRAME_HEIGHT);
+
+    // outStr << vidWidth << "," << vidHeight << "\n";
+    int len = std::sprintf(sendBuff, "%d,%d\n", vidWidth, vidHeight);
+    send_udp(hSock, sendPort, sendBuff, len);
 
     if(!video.isOpened())
     {
@@ -54,8 +121,6 @@ int main(int argc, char **argv)
     cv::Mat frame_hsv;
     cv::Mat mask_0;
     cv::Mat mask_1;
-    // cv::OutputArrayOfArrays cnts_0;
-    // cv::OutputArrayOfArrays cnts_1;
     std::vector<std::vector<cv::Point> > cnts_0;
     std::vector<std::vector<cv::Point> > cnts_1;
 
@@ -64,11 +129,14 @@ int main(int argc, char **argv)
     if(show_REALTIME){
         cv::imshow("Tracking", frame);
     }
+    std::cout << "loop begin" << std::endl;
 
     while(video.read(frame))
     {
-        // Start timer
         double timer = (double)cv::getTickCount();
+
+
+        // Start timer
 
         cv::GaussianBlur(frame, frame_blured, cv::Size(11, 11), 0);
         cv::cvtColor(frame_blured, frame_hsv, cv::COLOR_BGR2HSV);
@@ -81,8 +149,8 @@ int main(int argc, char **argv)
         cv::dilate(mask_0, mask_0, cv::Mat(), cv::Point(-1, -1), 2);
         cv::dilate(mask_1, mask_1, cv::Mat(), cv::Point(-1, -1), 2);
 
-        cv::findContours(mask_0.clone(), cnts_0, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);
-        cv::findContours(mask_1.clone(), cnts_1, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);
+        cv::findContours(mask_0, cnts_0, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);
+        cv::findContours(mask_1, cnts_1, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);
 
         if(cnts_0.size()>0){
             int id0 = getMaxAreaCountourID(cnts_0);
