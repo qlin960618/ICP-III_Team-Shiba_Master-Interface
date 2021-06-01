@@ -202,7 +202,7 @@ class BallTracker():
         ## with blocking indefinitly
         if timeout < 0:
             while not self.eStartProcessing.is_set():
-                time.sleep(0.05)
+                time.sleep(0.005)
             self._update_ball_position()
             return True
         elif timeout == 0:
@@ -210,9 +210,9 @@ class BallTracker():
             return not self.eStartProcessing.is_set()
 
         ## with timeout
-        for i in range(int(timeout/0.05)):
+        for i in range(int(timeout/0.005)):
             if self.eStartProcessing.is_set():
-                time.sleep(0.05)
+                time.sleep(0.005)
             else:
                 break
 
