@@ -5,6 +5,7 @@ import cv2 as cv
 import imutils
 import multiprocessing as mp
 import time
+import timeit
 import os
 try:
     import cPickle as pickle
@@ -22,12 +23,12 @@ DEFAULT_FRAME_HEIGHT = 720
 DEFAULT_FRAME_WIDTH = 1280
 
 
-SHOW_REALTIME = True
+SHOW_REALTIME = False
 
 INITIALIZATION_TIMEOUT = 100
 CIRCLE_R_THRESHOLD = 10
 
-def main():
+def main_old():
 
     #in format of Lower H, S, V
     #             Upper H, S, V
@@ -54,29 +55,71 @@ def main():
     if not tracker1.begin_capture():
         print("Error: with openCV")
         exit()
-
-
-
     for i in range(1000):
         tracker1.set_next_frame()
         if not tracker1.frame_ready(10):
             print("getting Frame Timed out")
             tracker1.exit()
             exit()
-
-
-
-
         # pos = tracker1.get_ball_angle(1)
         # print("cnt: %d -- x: %.5f, y: %.5f"%(i, pos[1], pos[2]))
         pos = tracker1.get_ball_dq_origin(1)
         print("cnt: %d -- DQ: %s"%(i, str(pos[1])))
-
-
-
-
     tracker1.exit()
+def main():
 
+    #in format of Lower H, S, V
+    #             Upper H, S, V
+    DEFAULT_greenLimit = [[66, 179, 101], [101, 255, 255]]
+    DEFAULT_redLimit = [[118, 95, 116], [189, 255, 255]]
+
+    INTERPOLORX_FILE_NAME = "./camera_config/lens_mapx.sciobj"
+    INTERPOLORY_FILE_NAME = "./camera_config/lens_mapy.sciobj"
+    ##### Determined Using the ColorRanger Script
+
+    ##event for monitoring error
+    eError = mp.Event()
+
+    tracker1=BallTracker(0, eError)
+    tracker2=BallTracker(1, eError)
+    tracker1.set_mask_color(DEFAULT_greenLimit, DEFAULT_redLimit)
+    tracker2.set_mask_color(DEFAULT_greenLimit, DEFAULT_redLimit)
+    print("Frame Size: %d x %d"%tracker1.get_frame_size())
+
+    tracker1.set_lens_mapping(INTERPOLORX_FILE_NAME, INTERPOLORY_FILE_NAME)
+    tracker2.set_lens_mapping(INTERPOLORX_FILE_NAME, INTERPOLORY_FILE_NAME)
+
+    print("Holding start")
+    time.sleep(2)
+    print("sending start signal")
+
+    if not tracker1.begin_capture() or not tracker2.begin_capture():
+        print("Error: with openCV")
+        exit()
+
+    start_t = timeit.default_timer()
+    for i in range(1000):
+        tracker1.set_next_frame()
+        tracker2.set_next_frame()
+        if not tracker1.frame_ready(10) or not tracker2.frame_ready(10) or eError.is_set():
+            print("getting Frame Timed out")
+            tracker1.exit()
+            tracker2.exit()
+            exit()
+        # pos = tracker1.get_ball_angle(1)
+        # print("cnt: %d -- x: %.5f, y: %.5f"%(i, pos[1], pos[2]))
+        pos1_1 = tracker1.get_ball_dq_origin(1)
+        pos2_1 = tracker2.get_ball_dq_origin(1)
+        pos1_0 = tracker1.get_ball_dq_origin(0)
+        pos2_0 = tracker2.get_ball_dq_origin(0)
+
+        end_t = timeit.default_timer()
+        print("Program Rate: %.3f"%(1/(end_t-start_t)))
+        start_t=end_t
+
+        # print("cnt: %d -- DQ: %s | DQ: %s"%(i, str(pos1[1]), str(pos2[1])))
+    tracker1.exit()
+    tracker2.exit()
 
 
 
