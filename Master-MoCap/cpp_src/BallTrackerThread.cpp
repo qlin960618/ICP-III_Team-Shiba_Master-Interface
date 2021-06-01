@@ -96,6 +96,7 @@ int main(int argc, char **argv)
     // }
     //creating sent buffer
     char sendBuff[100];
+    char recvBuff[100];
     //////////////////////OPENING SOCKET
 
     cv::VideoCapture video(0);
@@ -133,9 +134,20 @@ int main(int argc, char **argv)
 
     while(video.read(frame))
     {
+        int len = recv_udp(hSock, recvBuff, 100);
+        if(len>0){
+            std::cout << "recved something" << std::endl;
+            if (recvBuff[0]=='c'){ //set filter Color
+
+            }else if(recvBuff[0]=='e'){ //exit program
+                break;
+            }else{
+                std::cout << "wrong cmd" << std::endl;
+                continue;
+            }
+        }
+
         double timer = (double)cv::getTickCount();
-
-
         // Start timer
 
         cv::GaussianBlur(frame, frame_blured, cv::Size(11, 11), 0);
