@@ -1,8 +1,6 @@
 # import the necessary packages
 
 import numpy as np
-import cv2 as cv
-import imutils
 import multiprocessing as mp
 import time
 import timeit
@@ -17,9 +15,6 @@ except ImportError:
 
 from dqrobotics import *
 from scipy.spatial.transform import Rotation
-
-from ctypes import Structure, c_short
-from multiprocessing.sharedctypes import Array
 
 
 DEFAULT_FRAME_HEIGHT = 720
@@ -369,10 +364,6 @@ class BallTracker():
             self.pTracker.terminate()
             print("Camera %d Force Terminated"%(self.cameraID))
 
-
-
-class HSVColor(Structure):
-    _fields_ = [('h', c_short), ('s', c_short), ('v', c_short)]
 
 
 class BallTrackingThreadHandler(mp.Process):
