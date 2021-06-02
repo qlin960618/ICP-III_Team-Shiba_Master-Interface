@@ -5,6 +5,8 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include <chrono>
+#include <thread>
 
 
 
@@ -55,17 +57,43 @@ int recv_udp(int srcPort, void * packet_data, int max_packet_size){
     return byte;
 }
 
-
-
+const cv::String argKeys=
+    "{help h usage ?    |       | print this message}"
+    "{@vid              |0      | Specify video source}"
+    "{width             |1280   | Video resolution width}"
+    "{height            |720    | Video resolution height}"
+    "{rPort             |2220   | Specify UDP listening port}"
+    "{sPort             |1003   | Specify UDP targeting port}"
+    "{show              |0      | specify if want to show display}"
+    ;
+////argument format
 int main(int argc, char **argv)
 {
+    ///parsing arguments
+    cv::CommandLineParser parser(argc, argv, argKeys);
 
-    int recvPort=2220;
-    int sendPort=1003;
+    if(parser.has("help")){
+        parser.printMessage();
+        return 0;
+    }
+
+    int vidSrc = parser.get<int>(0);
+    char winTitle[20];
+    std::sprintf(winTitle, "Camera: %d", vidSrc);
+    int recvPort = parser.get<int>("rPort");
+    int sendPort = parser.get<int>("sPort");
+    int tVidWidth = parser.get<int>("width");
+    int tVidHeight = parser.get<int>("height");
 
 
-    bool show_REALTIME = false;
+    bool show_REALTIME=false;
+    if(parser.get<int>("show")>0)
+    {
+        std::cout<< "Camera: " << vidSrc << " enable display" <<std::endl;
+         show_REALTIME= true;
+    }
 
+    ////setting default color
     auto ball_0_low = cv::Scalar(66, 179, 101);
     auto ball_0_high = cv::Scalar(101, 255, 255);
     auto ball_1_low = cv::Scalar(118, 95, 116);
@@ -99,20 +127,25 @@ int main(int argc, char **argv)
     char recvBuff[100];
     //////////////////////OPENING SOCKET
 
+    ////set delay for some time to let python be ready
+    std::chrono::milliseconds timespan(500);
+    std::this_thread::sleep_for(timespan);
+
+    ///OPEN CV intialization
     cv::VideoCapture video(0);
-    video.set(cv::CAP_PROP_FRAME_WIDTH, DEFAULT_VIDEO_WIDTH);
-    video.set(cv::CAP_PROP_FRAME_HEIGHT, DEFAULT_VIDEO_HEIGHT);
+    video.set(cv::CAP_PROP_FRAME_WIDTH, tVidWidth);
+    video.set(cv::CAP_PROP_FRAME_HEIGHT, tVidHeight);
 
     int vidWidth = video.get(cv::CAP_PROP_FRAME_WIDTH);
     int vidHeight = video.get(cv::CAP_PROP_FRAME_HEIGHT);
 
     // outStr << vidWidth << "," << vidHeight << "\n";
-    int len = std::sprintf(sendBuff, "%d,%d\n", vidWidth, vidHeight);
+    int len = std::sprintf(sendBuff, "w:%d,%d", vidWidth, vidHeight);
     send_udp(hSock, sendPort, sendBuff, len);
 
     if(!video.isOpened())
     {
-        std::cout << "Could not read video file" << std::endl;
+        std::cout << "Could not read camera:" << vidSrc << std::endl;
         return 1;
     }
 
@@ -128,27 +161,48 @@ int main(int argc, char **argv)
     bool ok = video.read(frame);
 
     if(show_REALTIME){
-        cv::imshow("Tracking", frame);
+        cv::imshow(winTitle, frame);
     }
-    std::cout << "loop begin" << std::endl;
 
+    bool ball0_detec=0;
+    int ball0_posX=0;
+    int ball0_posY=0;
+    bool ball1_detec=0;
+    int ball1_posX=0;
+    int ball1_posY=0;
+
+    std::cout << "loop begin" << std::endl;
     while(video.read(frame))
     {
+        ball0_detec=0;
+        ball1_detec=0;
+        // Start timer
+        double timer = (double)cv::getTickCount();
+
+        //Listen for command and start processing
         int len = recv_udp(hSock, recvBuff, 100);
         if(len>0){
-            std::cout << "recved something" << std::endl;
-            if (recvBuff[0]=='c'){ //set filter Color
-
+            if (recvBuff[0]=='c' && len>=14){ //set filter Color
+                std::cout << "set filter: ";
+                for(int k=0; k<12; k++)
+                    std::cout << (int)(uint8_t)recvBuff[k+2] << ",";
+                std::cout << std::endl;
+                ball_0_low =   cv::Scalar(uint8_t(recvBuff[2]), uint8_t(recvBuff[3]), uint8_t(recvBuff[4]));
+                ball_0_high =  cv::Scalar(uint8_t(recvBuff[5]), uint8_t(recvBuff[6]), uint8_t(recvBuff[7]));
+                ball_1_low =   cv::Scalar(uint8_t(recvBuff[8]), uint8_t(recvBuff[9]), uint8_t(recvBuff[10]));
+                ball_1_high =  cv::Scalar(uint8_t(recvBuff[11]), uint8_t(recvBuff[12]), uint8_t(recvBuff[13]));
+                continue;
             }else if(recvBuff[0]=='e'){ //exit program
+                std::cout << "exit"<<std::endl;
                 break;
+            }else if (recvBuff[0]=='n'){ //process next frame
+                // std::cout << "next Frame"<<std::endl;
             }else{
-                std::cout << "wrong cmd" << std::endl;
+                // std::cout << "wrong cmd" << std::endl;
                 continue;
             }
         }
 
-        double timer = (double)cv::getTickCount();
-        // Start timer
 
         cv::GaussianBlur(frame, frame_blured, cv::Size(11, 11), 0);
         cv::cvtColor(frame_blured, frame_hsv, cv::COLOR_BGR2HSV);
@@ -165,41 +219,46 @@ int main(int argc, char **argv)
         cv::findContours(mask_1, cnts_1, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);
 
         if(cnts_0.size()>0){
+            ball0_detec = 1;    //enable detection check
             int id0 = getMaxAreaCountourID(cnts_0);
 
             auto M0 = cv::moments(cnts_0.at(id0));
 
-            int ball0_posX = M0.m10 / M0.m00;
-            int ball0_posY = M0.m01 / M0.m00;
+            ball0_posX = M0.m10 / M0.m00;
+            ball0_posY = M0.m01 / M0.m00;
 
             if(show_REALTIME){
                 cv::Point2f ball0_center;
                 float r0;
                 cv::minEnclosingCircle(cnts_0.at(id0), ball0_center, r0);
-
                 cv::circle(frame, ball0_center, r0, cv::Scalar(0,255,255), 2);
                 cv::circle(frame, cv::Point(ball0_posX, ball0_posY), 5, cv::Scalar(255,0,0), -1);
             }
 
         }
         if(cnts_1.size()>0){
+            ball1_detec = 1;    //enable detection check
             int id1 = getMaxAreaCountourID(cnts_1);
 
             auto M1 = cv::moments(cnts_1.at(id1));
 
-            int ball1_posX = M1.m10 / M1.m00;
-            int ball1_posY = M1.m01 / M1.m00;
+            ball1_posX = M1.m10 / M1.m00;
+            ball1_posY = M1.m01 / M1.m00;
 
             if(show_REALTIME){
                 cv::Point2f ball1_center;
                 float r1;
                 cv::minEnclosingCircle(cnts_1.at(id1), ball1_center, r1);
-
                 cv::circle(frame, ball1_center, r1, cv::Scalar(0,255,255), 2);
                 cv::circle(frame, cv::Point(ball1_posX, ball1_posY), 5, cv::Scalar(255,0,0), -1);
             }
         }
 
+        //sent data to python frontend
+        len = std::sprintf(sendBuff, "d:%d:%d,%d,%d,%d,%d,%d", vidSrc,
+                    ball0_detec, ball0_posX, ball0_posY,
+                    ball1_detec, ball1_posX, ball1_posY);
+        send_udp(hSock, sendPort, sendBuff, len);
 
         double timer_end = (double)cv::getTickCount();
         // Calculate Frames per second (FPS)
@@ -212,15 +271,15 @@ int main(int argc, char **argv)
 
             // Display frame.
             cv::resize(frame, frame, cv::Size(DEFAULT_VIDEO_WIDTH/2, DEFAULT_VIDEO_HEIGHT/2));
-            cv::imshow("Tracking", frame);
-
+            cv::imshow(winTitle, frame);
             // Exit if ESC pressed.
             int k = cv::waitKey(1);
             if(k == 27)
-            {
                 break;
-            }
         }
-
     }
+    std::cout << "exiting from cpp Backend" <<std::endl;
+    //program exit or error
+    len = std::sprintf(sendBuff, "err:%d", vidSrc);
+    send_udp(hSock, sendPort, sendBuff, len);
 }
