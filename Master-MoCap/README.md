@@ -2,32 +2,62 @@
 ## Main Python Script
 
 The main python script will handle initialization of all sub-components ex. camera tracking backend for all three camera instances. Control components functioning principle is described as below. If time allows, UI components will be added for visualization and simple operation.
+
+###### Capture Target Diagram
+![alt text](./images/Capture_Target_Diagram.png?raw=true "Capture Target Diagram"){:height="50%" width="50%"}
+
 ###### Pseudo Code:  
----
-header-includes:
-  - \usepackage[ruled,vlined,linesnumbered]{algorithm2e}
----
-# Algorithm 1
-Just a sample algorithmn
-\begin{algorithm}[H]
-\DontPrintSemicolon
-\SetAlgoLined
-\KwResult{Write here the result}
-\SetKwInOut{Input}{Input}\SetKwInOut{Output}{Output}
-\Input{Write here the input}
-\Output{Write here the output}
-\BlankLine
-\While{While condition}{
-    instructions\;
-    \eIf{condition}{
-        instructions1\;
-        instructions2\;
-    }{
-        instructions3\;
-    }
-}
-\caption{While loop with If/Else condition}
-\end{algorithm}
+    PROGRAM MoCap-Master:
+        initialize: camPV_DQ[1,2,3] //DQ transformation of camera in space
+        initialize: hCam[0] = BallTracker(0)
+        initialize: hCam[1] = BallTracker(1)
+        initialize: hCam[2] = BallTracker(2)
+        initialize: hRobot = initializeRobotController()
+        run = True
+
+        //initialize processing of first frame before enter loop
+        FOR i in 1,2,3:
+            hCam[i].set_next_frame()
+        ENDFOR
+
+        //mainloop
+        WHILE run:
+            //Preforming CV component
+            FOR i in 0,1,2:
+                ready = hCam[i].frame_ready(TIMEOUT)
+                IF not ready:
+                    exit()
+                ENDIF
+            ENDFOR
+            FOR i in 0,1,2:
+                hCam[i].set_next_frame()
+            ENDFOR
+
+            //Calculating Ball0 and Ball1 position of 3d Space
+            FOR id in 0,1:
+                ball_not_detected = False
+                FOR i in 0,1,2:
+                    detected, ball[id]_from_cam[i]_DQ = hCam[i].get_ball_dq_pov(camPV_DQ[i])
+                    IF not detected:
+                        ball_not_detected = True
+                    ENDIF
+                ENDFOR
+
+                IF not ball_not_detected:
+                    FOR (i,j,s) in (0,1,"01"), (1,2,"12"), (2,0,"20"):
+                        ptA, ptB = find_closet_point_on_lines(ball[id]_from_cam[i]_DQ, ball[id]_from_cam[j]_DQ)
+                        pt[s] = midpoint(ptA, ptB)
+                    ENDFOR
+                    ball[id]_pos_old = ball[id]_pos
+                    ball[id]_pos = average(pt["01"], pt["12"], pt["20"])
+                ELSE:
+                    ball[id]_pos = ball[id]_pos_old
+            ENDFOR
+
+            //Calculating where Robot needs to be and what orientation
+
+
+
 
 
 ## Class: BallTracker
