@@ -1,4 +1,17 @@
+- [Heading](#heading)
+  * [Sub-heading](#sub-heading)
+    + [Sub-sub-heading](#sub-sub-heading)
+- [Heading](#heading-1)
+  * [Sub-heading](#sub-heading-1)
+    + [Sub-sub-heading](#sub-sub-heading-1)
+- [Heading](#heading-2)
+  * [Sub-heading](#sub-heading-2)
+    + [Sub-sub-heading](#sub-sub-heading-2)
+
 # Motion Capture Master Interface
+
+<!-- toc -->
+
 ## Main Python Script
 
 The main python script will handle initialization of all sub-components ex. camera tracking backend for all three camera instances. Control components functioning principle is described as below. If time allows, UI components will be added for visualization and simple operation.
