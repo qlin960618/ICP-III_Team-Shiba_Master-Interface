@@ -4,7 +4,7 @@
 The main python script will handle initialization of all sub-components ex. camera tracking backend for all three camera instances. Control components functioning principle is described as below. If time allows, UI components will be added for visualization and simple operation.
 
 ###### Capture Target Diagram
-![alt text](./Images/Capture_Target_Diagram.png?raw=true "Capture Target Diagram"){:height="50%" width="50%"}
+<img src="./Images/Capture_Target_Diagram.png" width="600" height="130">
 
 ###### Pseudo Code:  
     PROGRAM MoCap-Master:
@@ -55,9 +55,18 @@ The main python script will handle initialization of all sub-components ex. came
             ENDFOR
 
             //Calculating where Robot needs to be and what orientation
+            //ball[0] define where the end effector is located,
+            //ball[1] to ball[0] direction, gives orientation.
+            taskSpaceDQ = get_taskspace_from_balls(ball[0]_pos, ball[1]_pos)
 
+            //calculate inverse kinematic of the robot
+            jointSpace[0,1,2,3,4,5] = calculate_inverse_kinematic(taskSpaceDQ)
 
+            //send target joint position to robot
+            hRobot.sentJoints(jointSpace)
 
+        ENDWHILE 
+    END_PROGRAM
 
 
 ## Class: BallTracker
