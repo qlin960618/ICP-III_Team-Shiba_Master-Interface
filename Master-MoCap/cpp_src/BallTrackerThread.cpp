@@ -264,7 +264,7 @@ int main(int argc, char **argv)
         auto tEnd = std::chrono::high_resolution_clock::now();
         // Calculate Frames per second (FPS)
         auto duration = std::chrono::duration_cast<std::chrono::microseconds>(tEnd - tStart);
-        float fps =  1000.0 / duration.count();
+        float fps =  1000000.0 / duration.count();
         tStart = tEnd;
 
         if (show_REALTIME){
