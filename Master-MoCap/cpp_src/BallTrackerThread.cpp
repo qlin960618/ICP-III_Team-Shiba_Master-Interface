@@ -171,7 +171,7 @@ int main(int argc, char **argv)
     int ball1_posX=0;
     int ball1_posY=0;
 
-    auto tStart = std::chrono::high_resolution_clock::now()
+    auto tStart = std::chrono::high_resolution_clock::now();
 
     std::cout << "loop begin" << std::endl;
     while(video.read(frame))
@@ -261,7 +261,7 @@ int main(int argc, char **argv)
                     ball1_detec, ball1_posX, ball1_posY);
         send_udp(hSock, sendPort, sendBuff, len);
 
-        auto tEnd = std::chrono::high_resolution_clock::now()
+        auto tEnd = std::chrono::high_resolution_clock::now();
         // Calculate Frames per second (FPS)
         float fps =  1000/ std::chrono::duration_cast<milliseconds>(tEnd - tStart);
         tStart = tEnd;
