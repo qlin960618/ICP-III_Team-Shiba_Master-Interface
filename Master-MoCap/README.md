@@ -1,12 +1,10 @@
-- [Main Python Script](#heading)
-  * [Capture Target Diagram](#sub-heading)
-  * [Pseudo Code](#sub-heading)
-- [Class: BallTracker](#heading-1)
-  * [Public function definition](#sub-heading-1)
 
 # Motion Capture Master Interface
-
-<!-- toc -->
+- [Main Python Script](#main-python-script)
+  * [Capture Target Diagram](#capture-target-diagram)
+  * [Pseudo Code](#pseudo-code-)
+- [Class: BallTracker](#class--balltracker)
+  * [Public function definition](#public-function-definition)
 
 ## Main Python Script
 
