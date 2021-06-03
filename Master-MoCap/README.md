@@ -96,7 +96,6 @@ The main python script will handle initialization of all sub-components ex. came
 3. def get_frame_size ()
    * return: int, int -- x_size, y_size
      * x_size, y_size of the camera Frame
-
 4. def frame_ready ( int )
    * int -- timeout
      * timeout value of how long the function should wait: -1=Inf, 0=no wait
