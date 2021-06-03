@@ -4,7 +4,7 @@
 The main python script will handle initialization of all sub-components ex. camera tracking backend for all three camera instances. Control components functioning principle is described as below. If time allows, UI components will be added for visualization and simple operation.
 
 ###### Capture Target Diagram
-![alt text](./images/Capture_Target_Diagram.png?raw=true "Capture Target Diagram"){:height="50%" width="50%"}
+![alt text](./Images/Capture_Target_Diagram.png?raw=true "Capture Target Diagram"){:height="50%" width="50%"}
 
 ###### Pseudo Code:  
     PROGRAM MoCap-Master:
