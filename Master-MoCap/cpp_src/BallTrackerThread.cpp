@@ -132,7 +132,7 @@ int main(int argc, char **argv)
     std::this_thread::sleep_for(timespan);
 
     ///OPEN CV intialization
-    cv::VideoCapture video(0);
+    cv::VideoCapture video(vidSrc);
     video.set(cv::CAP_PROP_FRAME_WIDTH, tVidWidth);
     video.set(cv::CAP_PROP_FRAME_HEIGHT, tVidHeight);
 
