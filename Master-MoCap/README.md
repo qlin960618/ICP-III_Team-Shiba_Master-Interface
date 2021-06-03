@@ -3,10 +3,10 @@
 
 The main python script will handle initialization of all sub-components ex. camera tracking backend for all three camera instances. Control components functioning principle is described as below. If time allows, UI components will be added for visualization and simple operation.
 
-###### Capture Target Diagram
+#### Capture Target Diagram
 <img src="./Images/Capture_Target_Diagram.png" width="600" height="130">
 
-###### Pseudo Code:  
+#### Pseudo Code:  
     PROGRAM MoCap-Master:
         initialize: camPV_DQ[1,2,3] //DQ transformation of camera in space
         initialize: hCam[0] = BallTracker(0)
@@ -65,7 +65,7 @@ The main python script will handle initialization of all sub-components ex. came
             //send target joint position to robot
             hRobot.sentJoints(jointSpace)
 
-        ENDWHILE 
+        ENDWHILE
     END_PROGRAM
 
 
