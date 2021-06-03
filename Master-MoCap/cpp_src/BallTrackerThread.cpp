@@ -171,13 +171,14 @@ int main(int argc, char **argv)
     int ball1_posX=0;
     int ball1_posY=0;
 
+    auto tStart = std::chrono::high_resolution_clock::now()
+
     std::cout << "loop begin" << std::endl;
     while(video.read(frame))
     {
         ball0_detec=0;
         ball1_detec=0;
         // Start timer
-        double timer = (double)cv::getTickCount();
 
         //Listen for command and start processing
         int len = recv_udp(hSock, recvBuff, 100);
@@ -260,10 +261,10 @@ int main(int argc, char **argv)
                     ball1_detec, ball1_posX, ball1_posY);
         send_udp(hSock, sendPort, sendBuff, len);
 
-        double timer_end = (double)cv::getTickCount();
+        auto tEnd = std::chrono::high_resolution_clock::now()
         // Calculate Frames per second (FPS)
-        float fps = cv::getTickFrequency() / (timer_end - timer);
-        timer_end = timer;
+        float fps =  1000/ std::chrono::duration_cast<milliseconds>(tEnd - tStart);
+        tStart = tEnd;
 
         if (show_REALTIME){
             // Display FPS on frame
