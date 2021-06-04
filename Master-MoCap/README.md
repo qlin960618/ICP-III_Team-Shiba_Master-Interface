@@ -11,7 +11,8 @@
 The main python script will handle initialization of all sub-components ex. camera tracking backend for all three camera instances. Control components functioning principle is described as below. If time allows, UI components will be added for visualization and simple operation.
 
 #### Capture Target Diagram
-<img src="./Images/Capture_Target_Diagram.png" width="600" height="130">
+**_Figure 1_**
+<img src="../Images/Capture_Target_Diagram.png" width="600" height="130">
 
 #### Pseudo Code:  
 ~~~~
@@ -53,8 +54,12 @@ PROGRAM MoCap-Master:
 
             IF not ball_not_detected:
                 FOR (i,j,s) in (0,1,"01"), (1,2,"12"), (2,0,"20"):
-                    ptA, ptB = find_closet_point_on_lines(ball[id]_from_cam[i]_DQ, ball[id]_from_cam[j]_DQ)
-                    pt[s] = midpoint(ptA, ptB)
+                    err, ptA, ptB = find_closest_point_on_lines(ball[id]_from_cam[i]_DQ, ball[id]_from_cam[j]_DQ)
+                    IF err:
+                        pt[s] = None
+                    ELSE:
+                        pt[s] = midpoint(ptA, ptB)
+                    ENDIF
                 ENDFOR
                 ball[id]_pos_old = ball[id]_pos
                 ball[id]_pos = average(pt["01"], pt["12"], pt["20"])
@@ -91,20 +96,20 @@ END_PROGRAM
    * cameraIndex:
      * camera index or device path depending on the requirement of
       openCV video capture handling
-2. def begin_capture()
+1. def begin_capture()
    * return: bool -- success
      * If the initialization is successful return "True" else is "False"  
-3. def get_frame_size ()
+1. def get_frame_size ()
    * return: int, int -- x_size, y_size
      * x_size, y_size of the camera Frame
-4. def frame_ready ( int )
+1. def frame_ready ( int )
    * int -- timeout
      * timeout value of how long the function should wait: -1=Inf, 0=no wait
       time
    * return: bool -- ready
      * return true if ball is in frame and new data/frame is ready for extracting.
       else return false when function timed out. (This is a blocking function)
-5. def get_ball_position (int)
+1. def get_ball_position (int)
    * int -- ballID
      * The id of the ball to locate. the ID can be hardcoded with color. Ex.
       Green=0, Red=1
@@ -113,7 +118,7 @@ END_PROGRAM
      * x, y pixel of where the ball with given ID is located in the camera.
       if ball is not present, function should return the last known position of
       the ball.
-6. def get_ball_dq_origin (int)
+1. def get_ball_dq_origin (int)
    * int -- ballID
      * same as above
    * return: bool, DQ -- ball_present, ball_vec
@@ -122,7 +127,7 @@ END_PROGRAM
       Processing of this function should also account for camera lens optical
       distortion. Question of how, should be handled internally as cameras model
       used is the same. Behavior under error condition should be same as previous.   
-7. def get_ball_dq_pov (int, DQ)
+1. def get_ball_dq_pov (int, DQ)
    * int -- ballID
       * same as above
    * DQ -- cameraDQ
@@ -131,5 +136,31 @@ END_PROGRAM
      * Boolean of if the ball with given ID is in frame
      * Unit DQ representing a line in space of where the ball with give ID could
       be located.
-8. def \_Destructor_()
+1. def \_Destructor_()
    * graceful handling of the exiting process and resource deallocation.
+
+
+## Supporting Functions:
+
+ > Listed here are the mentioned supporting functions from the pseudo code that the program utilize to calculate necessary information.
+
+####1. err, pt1, pt2 = find_closest_point_on_lines(DQ, DQ)
+
+Single camera typically is only capable of estimating position of an object in 2 Degree of Freedom (DoF) with somewhat desirable accuracy. For this reason, in order to achieve better tracking, Two is the absolute minimum but with some outlying case of error (basically when the target is inline with both camera). For visualization please see **_Figure 2_**. By obtaining the center pixel position of the ball in single camera. This gives a line where the ball could possibly rest (Here will be represented using the Dual Quaternion notation). The function then takes such information from two cameras. and processing it into two points position. What it utilize is similar concept to that of finding shortest distance between two lines in 3D space (**_Figure 3_**). The function then return the Cartesian Coordinate of the two point1 and point2. In the rare case of both actually are near parallel to each other, or calculated ball position is above certain distance from the capture space. error should be returned.
+
+**_Figure 2_**
+<img src="../Images/single_camera_tracking.png" width="400" height="170">
+**_Figure 3_**
+<img src="../Images/closest_point.png" width="150" height="170">
+
+####2. pt = midpoint(point, point)
+
+This function takes the output of the above if there is no error and return the midpoint of where the two points connect. Else the output value will be "None/NULL"
+
+####3. pt = average(pt1, pt2, pt3)
+
+This function also return the average of three given point. However, if any of the point is "_None_" because function "_find_closest_point_on_lines_" returned error. The function should ignore the given input
+
+####4. taskDQ = get_taskspace_from_balls(point0, point1)
+
+This function will use the Cartesian Coordinate of the two balls described in **_Figure 1_** and return a task space representation of the robot's target.
