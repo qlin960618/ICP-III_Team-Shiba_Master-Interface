@@ -144,7 +144,7 @@ END_PROGRAM
 
  > Listed here are the mentioned supporting functions from the pseudo code that the program utilize to calculate necessary information.
 
-####1. err, pt1, pt2 = find_closest_point_on_lines(DQ, DQ)
+#### err, pt1, pt2 = find_closest_point_on_lines(DQ, DQ)
 
 Single camera typically is only capable of estimating position of an object in 2 Degree of Freedom (DoF) with somewhat desirable accuracy. For this reason, in order to achieve better tracking, Two is the absolute minimum but with some outlying case of error (basically when the target is inline with both camera). For visualization please see **_Figure 2_**. By obtaining the center pixel position of the ball in single camera. This gives a line where the ball could possibly rest (Here will be represented using the Dual Quaternion notation). The function then takes such information from two cameras. and processing it into two points position. What it utilize is similar concept to that of finding shortest distance between two lines in 3D space (**_Figure 3_**). The function then return the Cartesian Coordinate of the two point1 and point2. In the rare case of both actually are near parallel to each other, or calculated ball position is above certain distance from the capture space. error should be returned.
 
@@ -153,14 +153,14 @@ Single camera typically is only capable of estimating position of an object in 2
 **_Figure 3_**
 <img src="../Images/closest_point.png" width="150" height="170">
 
-####2. pt = midpoint(point, point)
+#### pt = midpoint(point, point)
 
 This function takes the output of the above if there is no error and return the midpoint of where the two points connect. Else the output value will be "None/NULL"
 
-####3. pt = average(pt1, pt2, pt3)
+#### pt = average(pt1, pt2, pt3)
 
 This function also return the average of three given point. However, if any of the point is "_None_" because function "_find_closest_point_on_lines_" returned error. The function should ignore the given input
 
-####4. taskDQ = get_taskspace_from_balls(point0, point1)
+#### taskDQ = get_taskspace_from_balls(point0, point1)
 
 This function will use the Cartesian Coordinate of the two balls described in **_Figure 1_** and return a task space representation of the robot's target.
