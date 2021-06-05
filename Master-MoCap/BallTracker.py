@@ -448,5 +448,5 @@ class BallTrackingThreadHandler(mp.Process):
 
 
 if __name__=='__main__':
-    main()
-    # main_2instants()
+    # main()
+    main_2instants()

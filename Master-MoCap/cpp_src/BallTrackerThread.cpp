@@ -180,6 +180,10 @@ int main(int argc, char **argv)
     cv::Mat frame;
     bool ok = video.read(frame);
 
+    if(!ok){
+        return 0;
+    }
+
     if(show_REALTIME){
         cv::imshow(winTitle, frame);
     }
@@ -190,33 +194,15 @@ int main(int argc, char **argv)
     auto ball_1_low = cv::Scalar(0, 0, 0);
     auto ball_1_high = cv::Scalar(0, 0, 0);
     ///defining pipeline IO
-    // cv::GArray<cv::GArray<cv::Point>> cnts_0;
-    // cv::GArray<cv::GArray<cv::Point>> cnts_1;
-    cv::Mat f_PreProc, mask_0, mask_1;
+    cv::Mat f_PreProc, mask_0, mask_1, mask_00, mask_11;
     std::vector<std::vector<cv::Point>> cnts_0;
     std::vector<std::vector<cv::Point>> cnts_1;
+
     // defining popeline
-    // cv::GScalar H_b0_l;
-    // cv::GScalar H_b0_h;
-    // cv::GScalar H_b1_l;
-    // cv::GScalar H_b1_h;
     cv::GMat f_in;
-    // auto f_blured   = cv::gapi::gaussianBlur(f_in, cv::Size(11, 11), 0);
-    // auto f_hsv      = cv::gapi::RGB2HSV(f_blured);
-    // auto f_0_ranged = cv::gapi::inRange(f_hsv, H_b0_l, H_b0_h);
-    // auto f_1_ranged = cv::gapi::inRange(f_hsv, H_b1_l, H_b1_h);
     auto f_0_eroded = cv::gapi::erode(f_in, cv::Mat(), cv::Point(-1, -1), 2);
-    // auto f_1_eroded = cv::gapi::erode(f_1_ranged, cv::Mat(), cv::Point(-1, -1), 2);
     auto f_0_dilate = cv::gapi::dilate(f_0_eroded, cv::Mat(), cv::Point(-1, -1), 2);
-    // auto f_1_dilate = cv::gapi::dilate(f_1_eroded, cv::Mat(), cv::Point(-1, -1), 2);
-    auto cnt_out0   = cv::gapi::findContours(f_0_dilate, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);
-    // auto cnt_out1   = cv::gapi::findContours(f_1_dilate, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);
-    //get processing pipeline
-    // auto kernels = cv::gapi::kernels<custom::OCVPostProc>();
-    cv::GComputation cvPipe(f_in, cv::GOut(cnt_out0));
-    // auto cvPipe = getCVPipline.compileStreaming();
-    // auto in_src = cv::gapi::wip::make_src<cv::gapi::wip::GCaptureSource>(frame);
-    // cvPipe.setSource(cv::gin(in_src));
+    cv::GComputation cvPipe(f_in, f_0_dilate);
 
 
     bool ball0_detec=0;
@@ -258,7 +244,6 @@ int main(int argc, char **argv)
             }
         }
 
-        std::cout<<"ck1"<<std::endl;
 
         //preprocessing, not piplined
         cv::GaussianBlur(frame, f_PreProc, cv::Size(11, 11), 0);
@@ -266,15 +251,11 @@ int main(int argc, char **argv)
         cv::inRange(f_PreProc, ball_0_low, ball_0_high, mask_0);
         cv::inRange(f_PreProc, ball_1_low, ball_1_high, mask_1);
 
-        cvPipe.apply(mask_0, cv::gout(cnts_0));
-        cvPipe.apply(mask_1, cv::gout(cnts_1));
+        cvPipe.apply(mask_0, mask_00);
+        cvPipe.apply(mask_1, mask_11);
 
-
-        std::cout<<"ck2"<<std::endl;
-
-        // cvPipe.apply(frame, ball_0_low, ball_0_high, cnts_0);
-        // cvPipe.apply(frame, ball_1_low, ball_1_high, cnts_1);
-
+        cv::findContours(mask_00, cnts_0, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);
+        cv::findContours(mask_11, cnts_1, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);
 
         if(cnts_0.size()>0){
             ball0_detec = 1;    //enable detection check
