@@ -2,9 +2,9 @@
 #include <opencv2/core/ocl.hpp>
 #include <opencv2/core/utility.hpp>
 #include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
+// #include <sys/socket.h>
+// #include <netinet/in.h>
+// #include <arpa/inet.h>
 #include <chrono>
 #include <thread>
 
@@ -16,6 +16,9 @@
 
 #define DEFAULT_VIDEO_WIDTH 1280
 #define DEFAULT_VIDEO_HEIGHT 720
+
+
+#define DISABLE_HELP_MSG
 
 
 int getMaxAreaCountourID(std::vector<std::vector<cv::Point>> contours){
@@ -31,39 +34,12 @@ int getMaxAreaCountourID(std::vector<std::vector<cv::Point>> contours){
     return maxAreaCountourID;
 }
 
-bool send_udp(int srcPort, int destPort, const void * packet_data, int p_size){
-    sockaddr_in addr;
-    addr.sin_family = AF_INET;
-    addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
-    addr.sin_port = htons((unsigned short)destPort);
-
-    int sent_bytes = sendto(srcPort, (const char*)packet_data,
-                        p_size, 0, (sockaddr*)&addr,
-                        sizeof(sockaddr_in));
-    if(sent_bytes != p_size)
-    {
-        return false;
-    }
-    return true;
-}
-
-int recv_udp(int srcPort, void * packet_data, int max_packet_size){
-    sockaddr_in from;
-    socklen_t fromLength = sizeof(from);
-
-    int byte=recvfrom(srcPort, (char*)packet_data, max_packet_size,
-                0, (sockaddr*)&from, &fromLength);
-
-    return byte;
-}
 
 const cv::String argKeys=
     "{help h usage ?    |       | print this message}"
     "{@vid              |0      | Specify video source}"
     "{width             |1280   | Video resolution width}"
     "{height            |720    | Video resolution height}"
-    "{rPort             |2220   | Specify UDP listening port}"
-    "{sPort             |1003   | Specify UDP targeting port}"
     "{show              |0      | specify if want to show display}"
     ;
 ////argument format
@@ -72,16 +48,16 @@ int main(int argc, char **argv)
     ///parsing arguments
     cv::CommandLineParser parser(argc, argv, argKeys);
 
+#ifndef DISABLE_HELP_MSG
     if(parser.has("help")){
         parser.printMessage();
         return 0;
     }
+#endif
 
     int vidSrc = parser.get<int>(0);
     char winTitle[20];
     std::sprintf(winTitle, "Camera: %d", vidSrc);
-    int recvPort = parser.get<int>("rPort");
-    int sendPort = parser.get<int>("sPort");
     int tVidWidth = parser.get<int>("width");
     int tVidHeight = parser.get<int>("height");
 
@@ -89,7 +65,7 @@ int main(int argc, char **argv)
     bool show_REALTIME=false;
     if(parser.get<int>("show")>0)
     {
-        std::cout<< "Camera: " << vidSrc << " enable display" <<std::endl;
+        std::cout<< "stat:Camera: " << vidSrc << " enable display" <<std::endl;
          show_REALTIME= true;
     }
 
@@ -99,33 +75,9 @@ int main(int argc, char **argv)
     auto ball_1_low = cv::Scalar(118, 95, 116);
     auto ball_1_high = cv::Scalar(189, 255, 255);
 
-    //////////////////////OPENING SOCKET
-    int hSock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
-    if (hSock<=0){
-        std::cout << "failled to open socket" << std::endl;
-        return 0;
-    }
-    sockaddr_in address;
-    address.sin_family = AF_INET;
-    address.sin_addr.s_addr = INADDR_ANY;
-    address.sin_port = htons((unsigned short)recvPort);
-
-    if( bind(hSock,
-        (const sockaddr*) &address,
-        sizeof(sockaddr_in))<0 ){
-
-            std::cout << "Failled to bind Socket" <<std::endl;
-            return 0;
-        }
-    // std::cout << "socket opened" << std::endl;
-    // int nonBlocking=0;
-    // if(fcntl(hSock, F_SETFL, O_NONBLOCK, nonBlocking) == -1){
-    //     std::cout << "Failed to set non-blocking" << std::endl;
-    // }
-    //creating sent buffer
+    //creating sent/recv buffer
     char sendBuff[100];
     char recvBuff[100];
-    //////////////////////OPENING SOCKET
 
     ////set delay for some time to let python be ready
     std::chrono::milliseconds timespan(500);
@@ -140,12 +92,12 @@ int main(int argc, char **argv)
     int vidHeight = video.get(cv::CAP_PROP_FRAME_HEIGHT);
 
     // outStr << vidWidth << "," << vidHeight << "\n";
-    int len = std::sprintf(sendBuff, "w:%d,%d", vidWidth, vidHeight);
-    send_udp(hSock, sendPort, sendBuff, len);
+    std::cout << "stat:w"<<vidWidth<<","<<vidHeight<<std::endl;
+
 
     if(!video.isOpened())
     {
-        std::cout << "Could not read camera:" << vidSrc << std::endl;
+        std::cout << "erro:Could not read camera:" << vidSrc << std::endl;
         return 1;
     }
 
@@ -173,7 +125,7 @@ int main(int argc, char **argv)
 
     auto tStart = std::chrono::high_resolution_clock::now();
 
-    std::cout << "loop begin" << std::endl;
+    std::cout << "stat:loop begin" << std::endl;
     while(video.read(frame))
     {
         ball0_detec=0;
@@ -181,10 +133,11 @@ int main(int argc, char **argv)
         // Start timer
 
         //Listen for command and start processing
-        int len = recv_udp(hSock, recvBuff, 100);
+        std::cin >> recvBuff;
+        int len = std::strlen(recvBuff);
         if(len>0){
             if (recvBuff[0]=='c' && len>=14){ //set filter Color
-                std::cout << "set filter: ";
+                std::cout << "stat:set filter: ";
                 for(int k=0; k<12; k++)
                     std::cout << (int)(uint8_t)recvBuff[k+2] << ",";
                 std::cout << std::endl;
@@ -194,7 +147,7 @@ int main(int argc, char **argv)
                 ball_1_high =  cv::Scalar(uint8_t(recvBuff[11]), uint8_t(recvBuff[12]), uint8_t(recvBuff[13]));
                 continue;
             }else if(recvBuff[0]=='e'){ //exit program
-                std::cout << "exit"<<std::endl;
+                std::cout << "stat:exit"<<std::endl;
                 break;
             }else if (recvBuff[0]=='n'){ //process next frame
                 // std::cout << "next Frame"<<std::endl;
@@ -256,10 +209,10 @@ int main(int argc, char **argv)
         }
 
         //sent data to python frontend
-        len = std::sprintf(sendBuff, "d:%d:%d,%d,%d,%d,%d,%d", vidSrc,
+        len = std::sprintf(sendBuff, "data:%d,%d,%d,%d,%d,%d\n",
                     ball0_detec, ball0_posX, ball0_posY,
                     ball1_detec, ball1_posX, ball1_posY);
-        send_udp(hSock, sendPort, sendBuff, len);
+        std::cout << sendBuff;
 
         auto tEnd = std::chrono::high_resolution_clock::now();
         // Calculate Frames per second (FPS)
@@ -280,8 +233,6 @@ int main(int argc, char **argv)
                 break;
         }
     }
-    std::cout << "exiting from cpp Backend" <<std::endl;
     //program exit or error
-    len = std::sprintf(sendBuff, "err:%d", vidSrc);
-    send_udp(hSock, sendPort, sendBuff, len);
+    std::cout << "stat:exiting from cpp Backend" <<std::endl;
 }

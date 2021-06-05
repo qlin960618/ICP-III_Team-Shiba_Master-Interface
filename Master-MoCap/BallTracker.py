@@ -30,8 +30,6 @@ def main():
 
     #in format of Lower H, S, V
     #             Upper H, S, V
-    recvPort = 3344 #+1 will be taken also by frontend
-    sendPort = 2345 #+1 will be taken also by frontend
     DEFAULT_greenLimit = [[66, 179, 101], [101, 255, 255]]
     DEFAULT_redLimit = [[118, 95, 116], [189, 255, 255]]
 
@@ -42,9 +40,10 @@ def main():
     ##event for monitoring error
     eError = mp.Event()
 
-    tracker1=BallTracker(0, eError, recvPort, sendPort)
+    tracker1=BallTracker(0, eError)
     if not tracker1.begin_capture():
         print("Error: with openCV")
+        tracker1.exit()
         exit()
 
     tracker1.set_mask_color(DEFAULT_greenLimit, DEFAULT_redLimit)
@@ -71,8 +70,6 @@ def main_2instants():
 
     #in format of Lower H, S, V
     #             Upper H, S, V
-    recvPort = 3344 #+1 will be taken also by frontend
-    sendPort = 2345 #+1 will be taken also by frontend
     DEFAULT_greenLimit = [[66, 179, 101], [101, 255, 255]]
     DEFAULT_redLimit = [[118, 95, 116], [189, 255, 255]]
 
@@ -83,8 +80,8 @@ def main_2instants():
     ##event for monitoring error
     eError = mp.Event()
 
-    tracker1=BallTracker(0, eError, recvPort, sendPort)
-    tracker2=BallTracker(1, eError, recvPort+1, sendPort+1)
+    tracker1=BallTracker(0, eError)
+    tracker2=BallTracker(1, eError)
 
     print("Holding start")
     time.sleep(2)
@@ -92,6 +89,8 @@ def main_2instants():
 
     if not tracker1.begin_capture() or not tracker2.begin_capture():
         print("Error: with openCV")
+        tracker1.exit()
+        tracker2.exit()
         exit()
 
     tracker1.set_mask_color(DEFAULT_greenLimit, DEFAULT_redLimit)
@@ -132,14 +131,12 @@ def main_2instants():
 class BallTracker():
 
 
-    def __init__(self, cameraID, eError, recvPort, sendPort):
+    def __init__(self, cameraID, eError):
 
         self.sendToIP="localhost"
 
         self.cameraID = cameraID
         self.eError = eError
-        self.recvPort = recvPort
-        self.sendPort = sendPort
         self.ball_0_lowerHSV = [0,0,0]
         self.ball_0_upperHSV = [0,0,0]
         self.ball_1_lowerHSV = [0,0,0]
@@ -147,7 +144,7 @@ class BallTracker():
 
         ##IPC objects
         self.eExit = mp.Event()
-        # self.eNextFrame = mp.Event()
+        pipeCmd2, self.pipeCmd = mp.Pipe()
         self.pipeData, pipeData2 = mp.Pipe()
 
         #initialize Sending only Socket
@@ -156,7 +153,7 @@ class BallTracker():
         #initialize the Processing thread
         self.eExit.set()
         self.pTracker = BallTrackingThreadHandler(cameraID, eError, self.eExit,
-                    sendPort, recvPort, pipeData2)
+                    pipeCmd2, pipeData2)
         self.pTracker.start()
 
         ##initialize Ball 0,1 position
@@ -192,8 +189,7 @@ class BallTracker():
     Signal to start next frame processing, should be call at begining of each loop
     """
     def set_next_frame(self):
-        message=b"n"
-        self.sendSock .sendto(message, (self.sendToIP, self.sendPort))
+        self.pipeCmd.send("n".encode('utf-8'))
 
 
     """
@@ -222,8 +218,7 @@ class BallTracker():
         message = append_3(message, self.ball_1_lowerHSV)
         message = append_3(message, self.ball_1_upperHSV)
 
-        print("color msg: %s"%message)
-        self.sendSock.sendto(message, (self.sendToIP, self.sendPort))
+        self.pipeCmd.send(message)
 
 
     """
@@ -355,8 +350,6 @@ class BallTracker():
     """
     def exit(self):
         self.eExit.set()
-        message=b"e"
-        self.sendSock .sendto(message, (self.sendToIP, self.sendPort))
         self.pTracker.join(10)
         if not self.pTracker.is_alive():
             print("Camera %d Thread Joined"%(self.cameraID))
@@ -367,14 +360,13 @@ class BallTracker():
 
 
 class BallTrackingThreadHandler(mp.Process):
-    def __init__(self, cameraID, eError, eExit, sendPort, recvPort,
-                 pipeData):
+    def __init__(self, cameraID, eError, eExit, pipeCmd,
+                 pipeData, ):
         # Assigning Variable
         self.cameraID = cameraID
         self.eError = eError
         self.eExit = eExit
-        self.sendPort = sendPort
-        self.recvPort = recvPort
+        self.pipeCmd = pipeCmd
         self.pipeData = pipeData
         ## set error flag before initialized
         self.eError.set()
@@ -386,59 +378,85 @@ class BallTrackingThreadHandler(mp.Process):
         while self.eExit.is_set():
             time.sleep(0.5)
 
-        #setup UDP communication
-        recvFromIP = "0.0.0.0"
-        self.recvSock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        self.recvSock.bind((recvFromIP, self.recvPort))
-
         command = ['./BallTrackerThread', "%d"%self.cameraID,
         "-width=%d"%DEFAULT_FRAME_WIDTH,
         "-height=%d"%DEFAULT_FRAME_HEIGHT,
-        "-rPort=%d"%self.sendPort, "-sPort=%d"%self.recvPort,
         "-show=%d"%SHOW_REALTIME]
-        trackerProcess = subprocess.Popen(command)
-
+        trackerProc = subprocess.Popen(command, stdout=subprocess.PIPE,
+                                    stdin=subprocess.PIPE,
+                                    stderr=subprocess.STDOUT)
+        ##setting up pipe
+        print("setting up process pipe")
+        try:
+            out = trackerProc.stdout.readline()
+        except Exception as e:
+            print(e)
+            print("something went wrong when communicating")
+            trackerProc.kill()
+            return
+        data = out.decode("utf-8")
+        datas = data.split(":")
+        if(datas[1]=="Camera"):
+            print("showing realtime window")
+            print(data)
+            out = trackerProc.stdout.readline()
+            data = out.decode("utf-8")
+            datas = data.split(":")
         #grab Frame Size information
-        data, srcAddr = self.recvSock.recvfrom(100)
-        data = data.decode("utf-8")
-        xy = data[2:].split(",")
+        xy = datas[1][1:].split(",")
         self.vidWidth = int(xy[0])
         self.vidHeight = int(xy[1])
         #pipe to main
+        print("reciving frame information")
         self.pipeData.send([self.vidWidth, self.vidHeight])
 
-        #set socket to nonBlocking
-        self.recvSock.setblocking(0)
-        read_list=[self.recvSock]
+        #check if camera can open
+        out = trackerProc.stdout.readline()
+        data = out.decode("utf-8")
+        data = data.strip()
+        datas = data.split(":")
+        if(datas[0]=="erro"):
+            print("camera encountered error")
+            return
+        else:
+            print(data)
+            print("entering camera loop for cam %d"%self.cameraID)
 
         self.eError.clear()
-        while trackerProcess.poll() is None:
-            readable, _, _ = select.select(read_list, [], [])
-            for s in readable:
-                if s==self.recvSock:
-                    data, srcAddr = s.recvfrom(100)
-                    ##process Data
-                    data = data.decode("utf-8")
-                    # "d:%d:%d,%d,%d,%d,%d,%d"
-                    # "err:%d"
-                    cell = data.split(":")
-                    if(cell[0] == "err"): #recived error code
-                        print("recv Error")
-                        self.eExit.set()
+        while trackerProc.poll() is None:
+            if self.pipeCmd.poll(0.5):
+                cmd = self.pipeCmd.recv()
+                print("recived cmd:%s"%(str(cmd)))
 
-                    if(cell[0] == "d" and cell[1] == "%d"%self.cameraID):
-                        arr = cell[2].split(",")
-                        for i in range(6):
-                            arr[i]=int(arr[i])
-                        self.pipeData.send([[arr[0], arr[1], arr[2]],
-                                            [arr[3], arr[4], arr[5]]])
+                #send command message to cpp sub process
+                trackerProc.stdin.write(cmd)
+                if(cmd[0]==99):
+                    print("skipping this loop")
+                    continue
+                out = trackerProc.stdout.readline()
+                # data, err = self.trackerProc.communicate(input=cmd)
+                ##process Data
+                data = out.decode("utf-8")
+                print("got line: %s"%(data))
+                data = data.strip()
+
+                cell = data.split(":")
+                if(cell[0] == "erro"): #recived error code
+                    print("recv Error")
+                    self.eExit.set()
+
+                if(cell[0] == "data"):
+                    arr = cell[1].split(",")
+                    for i in range(6):
+                        arr[i]=int(arr[i])
+                    self.pipeData.send([[arr[0], arr[1], arr[2]],
+                                        [arr[3], arr[4], arr[5]]])
             if(self.eExit.is_set()):
                 print("exit Event set")
-                self.recvSock.close()
-                time.sleep(1)
-                trackerProcess.terminate()
+                trackerProc.stdin.write(b'e'.encode("utf-8"))
+                trackerProc.terminate()
                 break;
-        trackerProcess.wait(10)
+        trackerProc.wait(10)
         self.eError.set()
 
 
