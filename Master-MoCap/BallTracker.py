@@ -331,7 +331,7 @@ class BallTracker():
     def get_ball_dq_origin(self, i):
 
         data = self.get_ball_angle(i)
-        rot_quat = Rotation.from_euler('zyx', [0, data[2] , data[1]],
+        rot_quat = Rotation.from_euler('zyx', [0, data[2] , -data[1]],
                     degrees=False).as_quat()
         r = DQ([rot_quat[3], rot_quat[0],rot_quat[1],rot_quat[2]])
 
@@ -347,7 +347,7 @@ class BallTracker():
         be located.
     """
     def get_ball_dq_pov(self, i, povDQ):
-        pass
+        return self.get_ball_dq_origin(i)*povDQ
 
 
     """
