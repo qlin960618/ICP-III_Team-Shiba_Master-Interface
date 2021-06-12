@@ -1,4 +1,4 @@
-#include "UMIServo/UMIServo.h"
+#include "UMIServo.h"
 /**
 (c) 2020-2021, Murilo M. Marinho.
 
@@ -45,6 +45,9 @@ class UMIRobot
     void write(int qd[]);
 	void update();
     int* read();
+
+  //modify function for alternate joint 5,6 config
+  void modify_joint_56();
 	
 	void attachSerial(Stream& serial);
 	void attachPotentiometers(int ports[]);
@@ -54,6 +57,7 @@ class UMIRobot
 	bool is_initialized() const;
 	bool is_error() const;
 	String get_error_message() const;
+ 
 };
 
 #endif

@@ -1,4 +1,4 @@
-#include <UMIRobot.h>
+#include "UMIRobot.h"
 /**
 (c) 2020-2021, Murilo M. Marinho.
 
@@ -82,6 +82,17 @@ void UMIRobot::write(int qd[])
   {
     qd_[i]=qd[i];
   }
+  modify_joint_56();
+}
+
+void UMIRobot::modify_joint_56()
+{
+  int old_5 = qd_[4];
+  int old_6 = qd_[5];
+  
+  qd_[4] = old_5 + old_6;
+  qd_[5] = -old_5 + old_6;
+  
 }
 
 void UMIRobot::update()
@@ -120,11 +131,15 @@ void UMIRobot::attachSerial(Stream& stream)
 
 void UMIRobot::writeToSerial() const
 {
-  for (int i = 0; i < dof_; i++)
+  for (int i = 0; i < dof_-2; i++)
   {
     serial_->print(q_[i]);
     serial_->print(" ");
   }
+  serial_->print(int((q_[4]-q_[5])/2));
+  serial_->print(" ");
+  serial_->print(int((q_[4]+q_[5])/2));
+  serial_->print(" ");
   for (int i = 0; i < dof_; i++)
   {
     serial_->print(potentiometer_values_[i]);
