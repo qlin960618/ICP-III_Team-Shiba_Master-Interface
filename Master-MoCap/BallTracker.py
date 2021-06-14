@@ -35,8 +35,7 @@ def main():
     DEFAULT_greenLimit = [[66, 179, 101], [101, 255, 255]]
     DEFAULT_redLimit = [[118, 95, 116], [189, 255, 255]]
 
-    INTERPOLORX_FILE_NAME = "./camera_config/lens_mapx.sciobj"
-    INTERPOLORY_FILE_NAME = "./camera_config/lens_mapy.sciobj"
+    INTEPOLER_FILE_NAME = "./camera_config/lens_map.sciobj"
     ##### Determined Using the ColorRanger Script
 
     ##event for monitoring error
@@ -49,7 +48,7 @@ def main():
 
     tracker1.set_mask_color(DEFAULT_greenLimit, DEFAULT_redLimit)
     print("Frame Size: %d x %d"%tracker1.get_frame_size())
-    tracker1.set_lens_mapping(INTERPOLORX_FILE_NAME, INTERPOLORY_FILE_NAME)
+    tracker1.set_lens_mapping(INTEPOLER_FILE_NAME)
 
     print("Holding start")
     time.sleep(2)
@@ -76,8 +75,7 @@ def main_2instants():
     DEFAULT_greenLimit = [[66, 179, 101], [101, 255, 255]]
     DEFAULT_redLimit = [[118, 95, 116], [189, 255, 255]]
 
-    INTERPOLORX_FILE_NAME = "./camera_config/lens_mapx.sciobj"
-    INTERPOLORY_FILE_NAME = "./camera_config/lens_mapy.sciobj"
+    INTEPOLER_FILE_NAME = "./camera_config/lens_map.sciobj"
     ##### Determined Using the ColorRanger Script
 
     ##event for monitoring error
@@ -97,8 +95,8 @@ def main_2instants():
     tracker1.set_mask_color(DEFAULT_greenLimit, DEFAULT_redLimit)
     tracker2.set_mask_color(DEFAULT_greenLimit, DEFAULT_redLimit)
     print("Frame Size: %d x %d"%tracker1.get_frame_size())
-    tracker1.set_lens_mapping(INTERPOLORX_FILE_NAME, INTERPOLORY_FILE_NAME)
-    tracker2.set_lens_mapping(INTERPOLORX_FILE_NAME, INTERPOLORY_FILE_NAME)
+    tracker1.set_lens_mapping(INTEPOLER_FILE_NAME)
+    tracker2.set_lens_mapping(INTEPOLER_FILE_NAME)
 
 
 
@@ -165,8 +163,9 @@ class BallTracker():
         self.ballPosVisible = [False, False]
 
         ##initialize mapping file
-        self.lensMapAlpha = None
-        self.lensMapBeta = None
+        self.lensMapX = None
+        self.lensMapY = None
+        self.gridDistance = None
 
     """
     - return: bool -- success
@@ -230,14 +229,16 @@ class BallTracker():
     - path, path
         - Pass in camera Lens mapping for both x and y angle
     """
-    def set_lens_mapping(self, xMapFile, yMapFile):
-        if not os.path.isfile(xMapFile) or not os.path.isfile(yMapFile):
+    def set_lens_mapping(self, MapFile):
+        if not os.path.isfile(MapFile):
             print("Can't find or load mapping file")
             return False
-        with open(xMapFile, 'rb') as f:
-            self.lensMapAlpha = pickle.load(f)
-        with open(yMapFile, 'rb') as f:
-            self.lensMapBeta = pickle.load(f)
+        with open(MapFile, 'rb') as f:
+            temp = pickle.load(f)
+            self.lensMapX = temp[0]
+            self.lensMapY = temp[1]
+            self.gridDistance = temp[2]
+
         return True
 
     """
@@ -307,16 +308,16 @@ class BallTracker():
     - int -- ballID
         - The id of the ball to locate. the ID can be hardcoded with color. Ex.
         Green=0, Red=1
-    - return: float, float -- angle_alpha, angle_beta
-        get the angle of the line connecting center point of camera to the ball
+    - return: bool, float, float, float -- visible, depth, x_pos, y_pos
+        get the a point in camera frame where it is in line to where the camera and ball pass through
     """
-    def get_ball_angle(self, i):
+    def get_ball_line_pos(self, i):
         data = self.get_ball_position(i)
         ####################need to adjust for camera orientation here
-        alpha = self.lensMapAlpha(data[1], data[2])
-        beta = self.lensMapBeta(data[1], data[2])
+        x = self.lensMapX(data[1], data[2])
+        y = self.lensMapY(data[1], data[2])
 
-        return data[0], alpha, beta
+        return data[0], self.gridDistance,  x, y
 
     """
     - int -- ballID
@@ -328,14 +329,13 @@ class BallTracker():
         distortion. Question of how, should be handled internally as cameras model
         used is the same. Behavior under error condition should be same as previous.
     """
-    def get_ball_dq_origin(self, i):
+    def get_ball_dq_origin_plucker(self, i):
 
-        data = self.get_ball_angle(i)
-        rot_quat = Rotation.from_euler('zyx', [0, data[2] , -data[1]],
-                    degrees=False).as_quat()
-        r = DQ([rot_quat[3], rot_quat[0],rot_quat[1],rot_quat[2]])
+        data = self.get_ball_line_pos(i)
+        dir = DQ.normalize(DQ([data[2], data[3], data[1]]))
+        m = DQ.cross(DQ([0]), dir)
 
-        return data[0], r
+        return data[0], dir + DQ.E*m
     """
     - int -- ballID
         - same as above

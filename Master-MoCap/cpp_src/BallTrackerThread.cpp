@@ -1,13 +1,18 @@
 #include <opencv2/opencv.hpp>
 #include <opencv2/core/ocl.hpp>
 #include <opencv2/core/utility.hpp>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
 #include <chrono>
 #include <thread>
 
+#if defined(_WIN64)
+    #include <windows.h>
+    #include <winsock2.h>
+#else
+    #include <arpa/inet.h>
+    #include <sys/types.h>
+    #include <sys/socket.h>
+    #include <netinet/in.h>
+#endif
 
 
 // Convert to string

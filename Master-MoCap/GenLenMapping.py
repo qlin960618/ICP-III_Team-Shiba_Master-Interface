@@ -20,6 +20,7 @@ IM_RESOLUTION = 640
 
 
 CONFIG_FILE_NAME="./camera_config/lens_mapping.txt"
+INTEPOLER_FILE_NAME = "./camera_config/lens_map.sciobj"
 INTERPOLORX_FILE_NAME = "./camera_config/lens_mapx.sciobj"
 INTERPOLORY_FILE_NAME = "./camera_config/lens_mapy.sciobj"
 
@@ -55,8 +56,8 @@ if not LOAD_FROM_SCIOBJ:
     for i in range(GRID_N_POINTS):
         dx = xInd[i]*gridDistance
         dy = yInd[i]*gridDistance
-        alpha[i] = math.atan(dx/gridDistance)
-        beta[i]  = math.atan(dy/gridDistance)
+        alpha[i] = dx
+        beta[i]  = dy
         # print("ang for X:%d, Y:%d, alp:%.10f, bet:%.10f"%(xInd[i], yInd[i], alpha[i], beta[i]))
 
     ##begin Interpolate code
@@ -71,16 +72,24 @@ if not LOAD_FROM_SCIOBJ:
     for beta - y pixel symmetry    
     """
 
+    tosave = [f_alpha, f_beta, gridDistance]
     #Save interpolate to file
-    with open(INTERPOLORX_FILE_NAME, 'wb') as f:
-        pickle.dump(f_alpha, f)
-    with open(INTERPOLORY_FILE_NAME, 'wb') as f:
-        pickle.dump(f_beta, f)
+    with open(INTEPOLER_FILE_NAME, 'wb') as f:
+        pickle.dump(tosave, f)
+    # with open(INTERPOLORX_FILE_NAME, 'wb') as f:
+    #     pickle.dump(f_alpha, f)
+    # with open(INTERPOLORY_FILE_NAME, 'wb') as f:
+    #     pickle.dump(f_beta, f)
 else:
-    with open(INTERPOLORX_FILE_NAME, 'rb') as f:
-        f_alpha = pickle.load(f)
-    with open(INTERPOLORY_FILE_NAME, 'rb') as f:
-        f_beta = pickle.load(f)
+    with open(INTEPOLER_FILE_NAME, 'rb') as f:
+        tosave = pickle.load(f)
+        f_alpha = tosave[0]
+        f_beta = tosave[1]
+        gridDistance = tosave[2]
+    # with open(INTERPOLORX_FILE_NAME, 'rb') as f:
+    #     f_alpha = pickle.load(f)
+    # with open(INTERPOLORY_FILE_NAME, 'rb') as f:
+    #     f_beta = pickle.load(f)
 
 
 # import matplotlib.pyplot as plt

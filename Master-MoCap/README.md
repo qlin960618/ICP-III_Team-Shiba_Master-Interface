@@ -118,7 +118,7 @@ END_PROGRAM
      * x, y pixel of where the ball with given ID is located in the camera.
       if ball is not present, function should return the last known position of
       the ball.
-1. def get_ball_dq_origin (int)
+1. def get_ball_dq_origin_plucker (int)
    * int -- ballID
      * same as above
    * return: bool, DQ -- ball_present, ball_vec
