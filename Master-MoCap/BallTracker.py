@@ -333,9 +333,10 @@ class BallTracker():
 
         data = self.get_ball_line_pos(i)
         dir = DQ.normalize(DQ([data[2], data[3], data[1]]))
-        m = DQ.cross(DQ([0]), dir)
+        #since moment is 0 from origin
+        #m = DQ.cross(DQ([0]), dir)
 
-        return data[0], dir + DQ.E*m
+        return data[0], dir# + DQ.E*m
     """
     - int -- ballID
         - same as above
