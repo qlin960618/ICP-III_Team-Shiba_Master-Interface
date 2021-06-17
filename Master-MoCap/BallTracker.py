@@ -348,7 +348,7 @@ class BallTracker():
         be located.
     """
     def get_ball_dq_pov(self, i, povDQ):
-        return self.get_ball_dq_origin(i)*povDQ
+        return povDQ * self.get_ball_dq_origin(i) * conj(povDQ)
 
 
     """
@@ -357,7 +357,7 @@ class BallTracker():
     def exit(self):
         self.eExit.set()
         message=b"e"
-        self.sendSock .sendto(message, (self.sendToIP, self.sendPort))
+        self.sendSock.sendto(message, (self.sendToIP, self.sendPort))
         self.pTracker.join(10)
         if not self.pTracker.is_alive():
             print("Camera %d Thread Joined"%(self.cameraID))

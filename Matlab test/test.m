@@ -35,7 +35,9 @@ l1_dq = dir + E_*m1
 figure(2)
 plot(l1_dq,'line', 5); 
 
-l2 = l1_dq*cam2
+
+
+l2 = cam1*l1_dq*conj(cam1)
 %l2=l2/norm(l2)
 is_line(l2)
 figure(3)

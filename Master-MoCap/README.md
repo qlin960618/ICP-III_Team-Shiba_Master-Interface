@@ -144,7 +144,7 @@ END_PROGRAM
 
  > Listed here are the mentioned supporting functions from the pseudo code that the program utilize to calculate necessary information.
 
-#### err, pt1, pt2 = find_closest_point_on_lines(DQ, DQ)
+#### err, pt1, pt2 = find_closest_points_on_lines(DQ, DQ)
 
 Single camera typically is only capable of estimating position of an object in 2 Degree of Freedom (DoF) with somewhat desirable accuracy. For this reason, in order to achieve better tracking, Two is the absolute minimum but with some outlying case of error (basically when the target is inline with both camera). For visualization please see **_Figure 2_**. By obtaining the center pixel position of the ball in single camera. This gives a line where the ball could possibly rest (Here will be represented using the Dual Quaternion notation). The function then takes such information from two cameras. and processing it into two points position. What it utilize is similar concept to that of finding shortest distance between two lines in 3D space (**_Figure 3_**). The function then return the Cartesian Coordinate of the two point1 and point2. In the rare case of both actually are near parallel to each other, or calculated ball position is above certain distance from the capture space. error should be returned.
 
