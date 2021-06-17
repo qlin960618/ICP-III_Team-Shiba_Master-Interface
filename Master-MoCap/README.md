@@ -157,10 +157,7 @@ Single camera typically is only capable of estimating position of an object in 2
 
 This function takes the output of the above if there is no error and return the midpoint of where the two points connect. Else the output value will be "None/NULL"
 
-#### pt = average(pt1, pt2, pt3)
 
-This function also return the average of three given point. However, if any of the point is "_None_" because function "_find_closest_point_on_lines_" returned error. The function should ignore the given input
-
-#### taskDQ = get_taskspace_from_balls(point0, point1)
+#### taskDQ = get_taskspace_from_balls(point0, point1, angle)
 
 This function will use the Cartesian Coordinate of the two balls described in **_Figure 1_** and return a task space representation of the robot's target.
