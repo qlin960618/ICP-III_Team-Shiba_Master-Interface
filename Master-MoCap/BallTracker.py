@@ -347,7 +347,7 @@ class BallTracker():
         - Unit DQ representing a line in space of where the ball with give ID could
         be located.
     """
-    def get_ball_dq_pov(self, i, povDQ):
+    def get_ball_dq_pov_plucker(self, i, povDQ):
         return povDQ * self.get_ball_dq_origin(i) * conj(povDQ)
 
 
