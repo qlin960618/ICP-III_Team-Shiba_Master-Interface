@@ -20,7 +20,7 @@ configuration = {
     "controller_gain": 4.0,
     "damping": 0.01,
     "alpha": 0.999,  # Soft priority between translation and rotation [0,1] ~1 Translation, ~0 Rotation
-    "use_real_umirobot": False,
+    "use_real_umirobot": True,
     "umirobot_port": "COM3"
 }
 
@@ -65,6 +65,7 @@ def control_loop(umirobot_smr, cfg):
         # Control loop (We're going to control it open loop, because that is how we operate the real robot)
         # Initialize q with its initial value
         q = q_init
+        print("Main:: Entering While Loop")
         while True:
             # Change how you calculate xd
             xd = umirobot_vrep.get_xd_from_vrep()
@@ -77,6 +78,7 @@ def control_loop(umirobot_smr, cfg):
 
             # Update vrep with the new information we have
             umirobot_vrep.send_q_to_vrep(q)
+            # print(q)
             umirobot_vrep.show_x_in_vrep(umirobot_controller.get_last_robot_pose())
 
              # Update real robot if needed

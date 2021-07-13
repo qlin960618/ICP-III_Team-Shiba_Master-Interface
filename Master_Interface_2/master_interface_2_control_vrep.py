@@ -1,6 +1,6 @@
 from dqrobotics.interfaces.vrep import DQ_VrepInterface
 from dqrobotics.robot_modeling import DQ_Kinematics
-from umirobot_vrep_robot import UMIRobotVrepRobot
+from umirobot_task_space_control.umirobot_vrep_robot import UMIRobotVrepRobot
 from dqrobotics import *
 from dqrobotics.solvers import DQ_QuadprogSolver
 
@@ -65,7 +65,7 @@ vrep_interface = DQ_VrepInterface()
 
 try:
     # Try to connect to VREP
-    if not vrep_interface.connect(20000, 100, 10):
+    if not vrep_interface.connect(20001, 100, 10):
         # If connection fails, disconnect and throw exception
         vrep_interface.disconnect_all()
         raise Exception("Unable to connect to VREP.")

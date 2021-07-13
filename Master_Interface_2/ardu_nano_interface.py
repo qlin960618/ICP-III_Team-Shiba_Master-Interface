@@ -148,7 +148,7 @@ class SerialMasterInterface():
         values=[self.sharedDataArray[0].pot1, self.sharedDataArray[0].pot2,
                 self.sharedDataArray[0].pot3, self.sharedDataArray[0].pot4,
                 self.sharedDataArray[0].pot5, self.sharedDataArray[0].sw]
-        return tuple(values)
+        return values
 
     def get_status(self):
         return self.ePortConnected.is_set()
@@ -156,6 +156,8 @@ class SerialMasterInterface():
     # reset only serial connection
     def reset(self):
         self.ePortConnected.clear()
+        if self.serialLinkThreadHandler is None:
+            return
         self.serialLinkThreadHandler.join(10)
 
         if not self.serialLinkThreadHandler.is_alive():
