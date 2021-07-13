@@ -31,8 +31,8 @@ def main():
     #             Upper H, S, V
     recvPort = 3344 #+1 will be taken also by frontend
     sendPort = 2345 #+1 will be taken also by frontend
-    DEFAULT_greenLimit = [[66, 179, 101], [101, 255, 255]]
-    DEFAULT_redLimit = [[118, 95, 116], [189, 255, 255]]
+    DEFAULT_greenLimit = [[71, 59, 31], [108, 144, 78]]
+    DEFAULT_redLimit = [[111, 106, 24], [184, 255, 210]]
 
     INTEPOLER_FILE_NAME = "./camera_config/lens_map.sciobj"
     ##### Determined Using the ColorRanger Script
@@ -40,7 +40,7 @@ def main():
     ##event for monitoring error
     eError = mp.Event()
 
-    tracker1=BallTracker(0, eError, recvPort, sendPort)
+    tracker1=BallTracker(0, eError, recvPort, sendPort, backend='py')
     if not tracker1.begin_capture():
         print("Error: with openCV")
         exit()
@@ -62,7 +62,7 @@ def main():
         tracker1.set_next_frame()
         # pos = tracker1.get_ball_angle(1)
         # print("cnt: %d -- x: %.5f, y: %.5f"%(i, pos[1], pos[2]))
-        pos = tracker1.get_ball_dq_origin(1)
+        pos = tracker1.get_ball_dq_origin_plucker(1)
         print("cnt: %d -- DQ: %s"%(i, str(pos[1])))
     tracker1.exit()
 def main_2instants():
@@ -100,7 +100,7 @@ def main_2instants():
 
 
     start_t = timeit.default_timer()
-    for i in range(1000):
+    for i in range(100000):
         tracker1.set_next_frame()
         tracker2.set_next_frame()
         if not tracker1.frame_ready(10) or not tracker2.frame_ready(10) or eError.is_set():
@@ -110,10 +110,10 @@ def main_2instants():
             exit()
         # pos = tracker1.get_ball_angle(1)
         # print("cnt: %d -- x: %.5f, y: %.5f"%(i, pos[1], pos[2]))
-        pos1_1 = tracker1.get_ball_dq_origin(1)
-        pos2_1 = tracker2.get_ball_dq_origin(1)
-        pos1_0 = tracker1.get_ball_dq_origin(0)
-        pos2_0 = tracker2.get_ball_dq_origin(0)
+        pos1_1 = tracker1.get_ball_dq_origin_plucker(1)
+        pos2_1 = tracker2.get_ball_dq_origin_plucker(1)
+        pos1_0 = tracker1.get_ball_dq_origin_plucker(0)
+        pos2_0 = tracker2.get_ball_dq_origin_plucker(0)
 
         end_t = timeit.default_timer()
         print("Program Rate: %.3f"%(1/(end_t-start_t)))
@@ -199,7 +199,7 @@ class BallTracker():
     """
     def set_next_frame(self):
         if self.backend == 'py':
-            self.pipeCmd.sent('n')
+            self.pipeCmd.send('n')
         else:
             message=b"n"
             self.sendSock.sendto(message, (self.sendToIP, self.sendPort))
@@ -226,10 +226,10 @@ class BallTracker():
                     msg+=b'\xff'
             return msg
         if self.backend == 'py':
-            self.pipeCmd.sent([self.ball_0_lowerHSV.tolist(),
-                               self.ball_0_upperHSV.tolist(),
-                               self.ball_1_lowerHSV.tolist(),
-                               self.ball_1_upperHSV.tolist()])
+            self.pipeCmd.send([self.ball_0_lowerHSV,
+                               self.ball_0_upperHSV,
+                               self.ball_1_lowerHSV,
+                               self.ball_1_upperHSV])
             print("color: ", end='')
             print(self.ball_0_lowerHSV, end='')
             print(self.ball_0_upperHSV, end='')
@@ -378,7 +378,7 @@ class BallTracker():
     def exit(self):
         self.eExit.set()
         if self.backend == 'py':
-            self.pipeCmd.sent('e')
+            self.pipeCmd.send('e')
         else:
             message=b"e"
             self.sendSock.sendto(message, (self.sendToIP, self.sendPort))
