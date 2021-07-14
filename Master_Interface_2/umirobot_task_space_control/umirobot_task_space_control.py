@@ -15,12 +15,13 @@ from umirobot_task_space_controller import UMIRobotTaskSpaceController
 from dqrobotics.interfaces.vrep import DQ_VrepInterface
 from dqrobotics.utils.DQ_Math import rad2deg
 from umirobot_vrep_robot import UMIRobotVrepRobot
+from dqrobotics import *
 
 configuration = {
     "controller_gain": 4.0,
     "damping": 0.01,
     "alpha": 0.999,  # Soft priority between translation and rotation [0,1] ~1 Translation, ~0 Rotation
-    "use_real_umirobot": True,
+    "use_real_umirobot": False,
     "umirobot_port": "COM3"
 }
 
@@ -76,8 +77,11 @@ def control_loop(umirobot_smr, cfg):
             # Update the current joint positions
             q = q + u * sampling_time
 
+            #need to flip q3 for some reason
+            q_out=q.copy()
+            q_out[2]=-q_out[2]
             # Update vrep with the new information we have
-            umirobot_vrep.send_q_to_vrep(q)
+            umirobot_vrep.send_q_to_vrep(q_out)
             # print(q)
             umirobot_vrep.show_x_in_vrep(umirobot_controller.get_last_robot_pose())
 
@@ -87,7 +91,7 @@ def control_loop(umirobot_smr, cfg):
                     # Get the desired gripper value from VREP
                     gripper_value_d = umirobot_vrep.get_gripper_value_from_vrep()
                     # Control the gripper somehow
-                    q_temp = np.hstack((q, gripper_value_d))
+                    q_temp = np.hstack((q_out, gripper_value_d))
                     # The joint information has to be sent to the robot as a list of integers
                     umirobot_smr.send_qd(rad2deg(q_temp).astype(int).tolist())
                 else:
