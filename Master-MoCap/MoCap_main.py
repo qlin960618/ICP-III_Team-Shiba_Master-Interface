@@ -75,7 +75,7 @@ def main():
     #         hCam[i].set_next_frame()
     #     ENDFOR
     print("MasterMain: Holding start")
-    time.sleep(2)
+    time.sleep(10)
     print("MasterMain: sending start signal")
     tracker[0].set_next_frame()
     tracker[1].set_next_frame()
