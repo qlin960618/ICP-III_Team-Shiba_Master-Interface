@@ -51,7 +51,8 @@ def main():
     #     initialize: hCam[0] = BallTracker(0)
     #     initialize: hCam[1] = BallTracker(1)
     tracker = [None, None]
-    tracker[0]=BallTracker(0, eError, recvPort, sendPort, backend=BACKEND)
+    eExitTracker1 = mp.Event()
+    tracker[0]=BallTracker(0, eExitTracker1, recvPort, sendPort, backend=BACKEND)
     tracker[1]=BallTracker(1, eError, recvPort-1, sendPort-1, backend=BACKEND)
 
     if not tracker[0].begin_capture():
