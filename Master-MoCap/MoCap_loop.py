@@ -49,7 +49,18 @@ def get_closest_point_between_lines(plk_l1, plk_l2):
 
 	return p1, p2, valid
 
-def master_loop(MasterCommDataArray, eExit, eError, serialInterface):
+def master_loop(MasterCommDataArray, eExit, eError, tracker, serialInterface):
+
+    def shutdown():
+    	if USE_SECONDARY:
+    		serialInterface.reset()
+        if vrep_interface is not None:
+        	vrep_interface.disconnect_all()
+        for t in tracker:
+            if t is not None:
+                t.exit()
+
+
 
 	print("Entered master for testing")
 	if serialInterface is None:
@@ -63,9 +74,10 @@ def master_loop(MasterCommDataArray, eExit, eError, serialInterface):
 		if not vrep_interface.connect(VREP_ADDRESS, 20001, 100, 10):
 			# If connection fails, disconnect and throw exception
 			vrep_interface.disconnect_all()
+            vrep_interface=None
 			eError.set()
 			print("MasterLoop: Vrep Connection Failed")
-			return
+			shutdown()
 		umirobot_vrep = UMIRobotVrepRobot(vrep_interface=vrep_interface)
 		######################### initialize vrep interface #########################
 		######################### Get robot pose info       #########################
@@ -75,47 +87,18 @@ def master_loop(MasterCommDataArray, eExit, eError, serialInterface):
 		umirobot_vrep.show_xd_in_vrep(x_init)
 		x_master_ref = vrep_interface.get_object_pose("x_master_ref")
 		######################### Get robot pose info       #########################
-		############################## Initialise tracking setup ##############################
-		##Initializeing Camera Tracker Setting
-		#     initialize: hCam[0] = BallTracker(0)
-		#     initialize: hCam[1] = BallTracker(1)
-		tracker = [None, None]
-		tracker[0]=BallTracker(0, eError, recvPort, sendPort, backend=BACKEND)
-		tracker[1]=BallTracker(1, eError, recvPort-1, sendPort-1, backend=BACKEND)
-		if not tracker[0].begin_capture():
-			print("MasterLoop: Error: with openCV")
-			exit()
-		if not tracker[1].begin_capture():
-			print("MasterLoop: Error: with openCV")
-			exit()
 
-		tracker[0].set_mask_color(DEFAULT_greenLimit, DEFAULT_redLimit)
-		tracker[1].set_mask_color(DEFAULT_greenLimit, DEFAULT_redLimit)
-		print("MasterLoop: Frame Size: %d x %d"%tracker[0].get_frame_size())
-		tracker[0].set_lens_mapping(INTEPOLER_FILE_NAME)
-		tracker[1].set_lens_mapping(INTEPOLER_FILE_NAME)
-
-		#     //initialize processing of first frame before enter loop
-		#     FOR i in 0,1: //camera
-		#         hCam[i].set_next_frame()
-		#     ENDFOR
-		print("MasterLoop: Holding start")
-		time.sleep(2)
-		print("MasterLoop: sending start signal")
-		tracker[0].set_next_frame()
-		tracker[1].set_next_frame()
-		############################## Initialise tracking setup ##############################
 		######################### Initalize Loop variable   #########################
 		gripper_val = 0
 		xd_t_offset = [0,-0.16,0]
 		xd_component = [0, 0, 0, 0, 0, 0]
 		#     //initialize variables that will be used in loop
 		#     initialize: ball[2]_from_cam[2]_DQ -- 2x2 DQ array
-		plucker_i_from_cam_j = [[DQ(0) for j in range(2)]  for i in range(2)]
+		plucker_i_from_cam_j = [[DQ([0]) for j in range(2)]  for i in range(2)]
 		#     Initialize: ball[2]_pos -- 2x1 vec3
-		ball_i_pos = [np.Array([0,0,0]) for i in range(2)]
+		ball_i_pos = [np.array([0,0,0]) for i in range(2)]
 		#     Initialize: ball[2]_pos_old = None -- 2x1 vec3
-		ball_i_pos_old = [np.Array([0,0,0]) for i in range(2)]
+		ball_i_pos_old = [np.array([0,0,0]) for i in range(2)]
 		######################### Initalize Loop variable   #########################
 		######################### Begin Loop #########################
 		while not eExit.is_set() and not eError.is_set():
@@ -157,10 +140,10 @@ def master_loop(MasterCommDataArray, eExit, eError, serialInterface):
 					print("MasterLoop: Camera Broke for some reason")
 					break
 
-				plucker_i_from_cam_j[1][0] = tracker[0].get_ball_dq_origin_plucker(1)
-				plucker_i_from_cam_j[0][0] = tracker[0].get_ball_dq_origin_plucker(0)
-				plucker_i_from_cam_j[1][1] = tracker[1].get_ball_dq_origin_plucker(1)
-				plucker_i_from_cam_j[0][1] = tracker[1].get_ball_dq_origin_plucker(0)
+				_, plucker_i_from_cam_j[1][0] = tracker[0].get_ball_dq_pov_plucker(1, CAM1_POV)
+				_, plucker_i_from_cam_j[0][0] = tracker[0].get_ball_dq_pov_plucker(0, CAM1_POV)
+				_, plucker_i_from_cam_j[1][1] = tracker[1].get_ball_dq_pov_plucker(1, CAM2_POV)
+				_, plucker_i_from_cam_j[0][1] = tracker[1].get_ball_dq_pov_plucker(0, CAM2_POV)
 				pt11, pt12, val = get_closest_point_between_lines(plucker_i_from_cam_j[1][0],
                             plucker_i_from_cam_j[1][1])
 				pt01, pt02, val = get_closest_point_between_lines(plucker_i_from_cam_j[0][0],
@@ -204,11 +187,7 @@ def master_loop(MasterCommDataArray, eExit, eError, serialInterface):
 		print(exc_type, fname, exc_tb.tb_lineno)
 		print(e)
 
-	if USE_SECONDARY:
-		serialInterface.reset()
-	vrep_interface.disconnect_all()
-	tracker[0].exit()
-	tracker[1].exit()
+    shutdown()
 	return
 
 

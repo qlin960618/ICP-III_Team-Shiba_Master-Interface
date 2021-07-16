@@ -49,6 +49,39 @@ def main():
 	eExit.clear()
 	eError = mp.Event()
 
+	############################## Initialise tracking setup ##############################
+	##Initializeing Camera Tracker Setting
+	#     initialize: hCam[0] = BallTracker(0)
+	#     initialize: hCam[1] = BallTracker(1)
+	eErrorTracker = mp.Event()
+    tracker = [None, None]
+	tracker[0]=BallTracker(0, eErrorTracker, recvPort, sendPort, backend=BACKEND)
+	tracker[1]=BallTracker(1, eErrorTracker, recvPort-1, sendPort-1, backend=BACKEND)
+	if not tracker[0].begin_capture():
+		print("MasterLoop: Error: with openCV")
+		shutdown()
+        return
+	if not tracker[1].begin_capture():
+		print("MasterLoop: Error: with openCV")
+		shutdown()
+        return
+
+	tracker[0].set_mask_color(DEFAULT_greenLimit, DEFAULT_redLimit)
+	tracker[1].set_mask_color(DEFAULT_greenLimit, DEFAULT_redLimit)
+	print("MasterLoop: Frame Size: %d x %d"%tracker[0].get_frame_size())
+	tracker[0].set_lens_mapping(INTEPOLER_FILE_NAME)
+	tracker[1].set_lens_mapping(INTEPOLER_FILE_NAME)
+
+	#     //initialize processing of first frame before enter loop
+	#     FOR i in 0,1: //camera
+	#         hCam[i].set_next_frame()
+	#     ENDFOR
+	print("MasterLoop: Holding start")
+	time.sleep(2)
+	print("MasterLoop: sending start signal")
+	tracker[0].set_next_frame()
+	tracker[1].set_next_frame()
+	############################## Initialise tracking setup ##############################
 
 	masterSecondaryInterface = None
 	if USE_PHYSICAL_SECONDARY_MASTER:
@@ -66,7 +99,7 @@ def main():
 		##start the Master loop
 		masterMainLoopHandler = mp.Process(
 		    target=master_loop,
-		    args=[MasterCommDataArray, eExit, eError, masterSecondaryInterface]
+		    args=[MasterCommDataArray, eExit, eError, tracker, masterSecondaryInterface]
 		)
 		masterMainLoopHandler.start()
 

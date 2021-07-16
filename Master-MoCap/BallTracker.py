@@ -369,7 +369,8 @@ class BallTracker():
         be located.
     """
     def get_ball_dq_pov_plucker(self, i, povDQ):
-        return povDQ * self.get_ball_dq_origin(i) * conj(povDQ)
+        data=self.get_ball_dq_origin_plucker(i)
+        return data[0], povDQ * data[1] * conj(povDQ)
 
 
     """
@@ -388,6 +389,9 @@ class BallTracker():
         else:
             self.pTracker.terminate()
             print("Camera %d Force Terminated"%(self.cameraID))
+
+        self.recvSock.close()
+        self.sendSock.close()
 
 
 
