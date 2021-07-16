@@ -94,7 +94,7 @@ int main(int argc, char **argv)
     bool show_REALTIME=false;
     if(parser.get<int>("show")>0)
     {
-        std::cout<< "Camera: " << vidSrc << " enable display" <<std::endl;
+        std::cout<< "backend: Camera: " << vidSrc << " enable display" <<std::endl;
          show_REALTIME= true;
     }
 
@@ -107,7 +107,7 @@ int main(int argc, char **argv)
     //////////////////////OPENING SOCKET
     int hSock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
     if (hSock<=0){
-        std::cout << "failled to open socket" << std::endl;
+        std::cout << "backend: failled to open socket" << std::endl;
         return 0;
     }
     sockaddr_in address;
@@ -119,7 +119,7 @@ int main(int argc, char **argv)
         (const sockaddr*) &address,
         sizeof(sockaddr_in))<0 ){
 
-            std::cout << "Failled to bind Socket" <<std::endl;
+            std::cout << "backend: Failled to bind Socket" <<std::endl;
             return 0;
         }
     // std::cout << "socket opened" << std::endl;
@@ -150,7 +150,7 @@ int main(int argc, char **argv)
 
     if(!video.isOpened())
     {
-        std::cout << "Could not read camera:" << vidSrc << std::endl;
+        std::cout << "backend: Could not read camera:" << vidSrc << std::endl;
         return 1;
     }
 
@@ -178,7 +178,7 @@ int main(int argc, char **argv)
 
     auto tStart = std::chrono::high_resolution_clock::now();
 
-    std::cout << "loop begin" << std::endl;
+    std::cout << "backend: loop begin" << std::endl;
     while(video.read(frame))
     {
         ball0_detec=0;
@@ -189,7 +189,7 @@ int main(int argc, char **argv)
         int len = recv_udp(hSock, recvBuff, 100);
         if(len>0){
             if (recvBuff[0]=='c' && len>=14){ //set filter Color
-                std::cout << "set filter: ";
+                std::cout << "backend: set filter: ";
                 for(int k=0; k<12; k++)
                     std::cout << (int)(uint8_t)recvBuff[k+2] << ",";
                 std::cout << std::endl;
@@ -199,7 +199,7 @@ int main(int argc, char **argv)
                 ball_1_high =  cv::Scalar(uint8_t(recvBuff[11]), uint8_t(recvBuff[12]), uint8_t(recvBuff[13]));
                 continue;
             }else if(recvBuff[0]=='e'){ //exit program
-                std::cout << "exit"<<std::endl;
+                std::cout << "backend: exit"<<std::endl;
                 break;
             }else if (recvBuff[0]=='n'){ //process next frame
                 // std::cout << "next Frame"<<std::endl;
@@ -285,7 +285,7 @@ int main(int argc, char **argv)
                 break;
         }
     }
-    std::cout << "exiting from cpp Backend" <<std::endl;
+    std::cout << "backend: exiting from cpp Backend" <<std::endl;
     //program exit or error
     len = std::sprintf(sendBuff, "err:%d", vidSrc);
     send_udp(hSock, sendPort, sendBuff, len);
