@@ -75,7 +75,7 @@ def main():
     #         hCam[i].set_next_frame()
     #     ENDFOR
     print("MasterMain: Holding start")
-    time.sleep(10)
+    time.sleep(2)
     print("MasterMain: sending start signal")
     tracker[0].set_next_frame()
     tracker[1].set_next_frame()
@@ -85,6 +85,7 @@ def main():
         time.sleep(0.5)
         count+=1
         if count>100:
+            print("MasterMain: Waiting for camera time out")
             tracker[0].exit()
             tracker[1].exit()
             return
