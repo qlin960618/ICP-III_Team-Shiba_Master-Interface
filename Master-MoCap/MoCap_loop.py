@@ -129,7 +129,7 @@ def master_loop(MasterCommDataArray, eExit, eError, serialInterface):
 				MasterCommDataArray[0].rot = xd_component[4]
 			else:
 				gripper_val = math.radians(MasterCommDataArray[0].gripper)
-                xd_component[4] = MasterCommDataArray[0].rot
+				xd_component[4] = MasterCommDataArray[0].rot
 
 
             # copy loop control variable
@@ -150,9 +150,9 @@ def master_loop(MasterCommDataArray, eExit, eError, serialInterface):
 
             ######################### When Using Motion Capture
 			elif zero_offset == 0 and master_on == 1:
-                ########## Request Data from frame
+				########## Request Data from frame
 				if not tracker[0].frame_ready(10) or not tracker[1].frame_ready(10):
-                    # Camera Broke for some reason
+					# Camera Broke for some reason
 					eError.set()
 					print("MasterLoop: Camera Broke for some reason")
 					break
