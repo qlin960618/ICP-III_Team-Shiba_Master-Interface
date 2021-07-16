@@ -50,10 +50,9 @@ def main():
     ##Initializeing Camera Tracker Setting
     #     initialize: hCam[0] = BallTracker(0)
     #     initialize: hCam[1] = BallTracker(1)
-    eErrorTracker = mp.Event()
     tracker = [None, None]
-    tracker[0]=BallTracker(0, eErrorTracker, recvPort, sendPort, backend=BACKEND)
-    tracker[1]=BallTracker(1, eErrorTracker, recvPort-1, sendPort-1, backend=BACKEND)
+    tracker[0]=BallTracker(0, eError, recvPort, sendPort, backend=BACKEND)
+    tracker[1]=BallTracker(1, eError, recvPort-1, sendPort-1, backend=BACKEND)
 
     if not tracker[0].begin_capture():
         print("MasterMain: Error: with openCV")
@@ -80,6 +79,15 @@ def main():
     print("MasterMain: sending start signal")
     tracker[0].set_next_frame()
     tracker[1].set_next_frame()
+
+    count=0
+    while eError.is_set():
+        time.sleep(0.5)
+        count+=1
+        if count>100:
+            tracker[0].exit()
+            tracker[1].exit()
+            return
     ############################## Initialise tracking setup ##############################
 
     masterSecondaryInterface = None
