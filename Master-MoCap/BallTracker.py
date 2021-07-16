@@ -40,7 +40,7 @@ def main():
     ##event for monitoring error
     eError = mp.Event()
 
-    tracker1=BallTracker(0, eError, recvPort, sendPort, backend='py')
+    tracker1=BallTracker(0, eError, recvPort, sendPort, backend='cpp')
     if not tracker1.begin_capture():
         print("Error: with openCV")
         exit()
