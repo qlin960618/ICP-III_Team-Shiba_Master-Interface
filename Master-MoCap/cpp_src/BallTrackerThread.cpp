@@ -282,6 +282,7 @@ int main(int argc, char **argv)
             // Exit if ESC pressed.
             int k = cv::waitKey(1);
             if(k == 27)
+                std::cout << "backend: recived Exit from keyboard" <<std::endl;
                 break;
         }
     }
