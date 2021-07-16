@@ -91,7 +91,7 @@ def master_loop(MasterCommDataArray, eExit, eError, serialInterface):
 
 		tracker[0].set_mask_color(DEFAULT_greenLimit, DEFAULT_redLimit)
 		tracker[1].set_mask_color(DEFAULT_greenLimit, DEFAULT_redLimit)
-		print("MasterLoop: Frame Size: %d x %d"%tracker1.get_frame_size())
+		print("MasterLoop: Frame Size: %d x %d"%tracker[0].get_frame_size())
 		tracker[0].set_lens_mapping(INTEPOLER_FILE_NAME)
 		tracker[1].set_lens_mapping(INTEPOLER_FILE_NAME)
 
@@ -120,7 +120,6 @@ def master_loop(MasterCommDataArray, eExit, eError, serialInterface):
 		######################### Begin Loop #########################
 		while not eExit.is_set() and not eError.is_set():
 			# print("gripper val: %.3f"%MasterCommDataArray[0].gripper)
-			time.sleep(0.1)
 
 			if USE_SECONDARY:
 				secMasterData = serialInterface.get_data()
@@ -130,9 +129,12 @@ def master_loop(MasterCommDataArray, eExit, eError, serialInterface):
 				MasterCommDataArray[0].rot = xd_component[4]
 			else:
 				gripper_val = math.radians(MasterCommDataArray[0].gripper)
-				xd_component[4] = MasterCommDataArray[0].rot
+                xd_component[4] = MasterCommDataArray[0].rot
 
 
+            # copy loop control variable
+			zero_offset = MasterCommDataArray[0].zero_offset
+			master_on = MasterCommDataArray[0].master_on
 			#initalize xd_component
 			######################### When Using UI Override
 			if MasterCommDataArray[0].xdovrd == 1:
@@ -143,21 +145,34 @@ def master_loop(MasterCommDataArray, eExit, eError, serialInterface):
 						xd_component[i]=MasterCommDataArray[0].xd[i]*_factor
 					if i == 2:
 						_factor = 1
+				##adding loop delay
+				time.sleep(0.1)
 
-			######################### When Using Motion Capture
-			elif not MasterCommDataArray[0].zero_offset and MasterCommDataArray[0].master_on:
-				########## Request Data from frame
+            ######################### When Using Motion Capture
+			elif zero_offset == 0 and master_on == 1:
+                ########## Request Data from frame
 				if not tracker[0].frame_ready(10) or not tracker[1].frame_ready(10):
-					# Camera Broke for some reason
+                    # Camera Broke for some reason
 					eError.set()
 					print("MasterLoop: Camera Broke for some reason")
 					break
 
-		        plucker_i_from_cam_j[1][0] = tracker[0].get_ball_dq_origin_plucker(1)
-		        plucker_i_from_cam_j[1][1] = tracker[1].get_ball_dq_origin_plucker(1)
-		        plucker_i_from_cam_j[0][0] = tracker[0].get_ball_dq_origin_plucker(0)
-		        plucker_i_from_cam_j[0][1] = tracker[1].get_ball_dq_origin_plucker(0)
-				########## Ser to calculate Next Frame
+				plucker_i_from_cam_j[1][0] = tracker[0].get_ball_dq_origin_plucker(1)
+				plucker_i_from_cam_j[0][0] = tracker[0].get_ball_dq_origin_plucker(0)
+				plucker_i_from_cam_j[1][1] = tracker[1].get_ball_dq_origin_plucker(1)
+				plucker_i_from_cam_j[0][1] = tracker[1].get_ball_dq_origin_plucker(0)
+				pt11, pt12, val = get_closest_point_between_lines(plucker_i_from_cam_j[1][0],
+                            plucker_i_from_cam_j[1][1])
+				pt01, pt02, val = get_closest_point_between_lines(plucker_i_from_cam_j[0][0],
+                            plucker_i_from_cam_j[0][1])
+				print("Loop Result: %s"%(str(pt11)))
+
+
+
+
+                ########## Ser to calculate Next Frame
+				tracker[0].set_next_frame()
+				tracker[1].set_next_frame()
 			# else:
 				# xd_component=[0,0,0,0,0,0]
 				# print(vv)

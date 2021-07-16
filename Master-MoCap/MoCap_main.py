@@ -15,7 +15,7 @@ USE_PHYSICAL_SECONDARY_MASTER = False
 VREP_ADDRESS = '192.168.10.102'
 
 ############################## program parameter ##############################
-BACKEND='py'
+BACKEND='cpp'
 recvPort = 3344 #+1 will be taken also by frontend
 sendPort = 2345 #+1 will be taken also by frontend
 ############################## program parameter ##############################
