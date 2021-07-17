@@ -5,12 +5,12 @@ include_namespace_dq
 
 l=20 ;
 
-r1=(cos(-3*pi/8)+sin(-3*pi/8)*j_)*(cos(-pi/4)+sin(-pi/4)*k_);
-t1=-l*j_;
+r1=(cos(3*pi/8)+sin(3*pi/8)*j_);
+t1=l*i_;
 cam1 = r1+E_*t1*r1/2
 
-r2=(cos(3*pi/8)+sin(3*pi/8)*i_);
-t2=-l*i_;
+r2=(cos(3*pi/8)+sin(3*pi/8)*j_)*(cos(pi/4)+sin(pi/4)*k_);
+t2=-l*j_;
 cam2 = r2+E_*t2*r2/2
 
 figure(1)
@@ -73,3 +73,4 @@ xlabel("x")
 ylabel("y")
 zlabel("z")
 
+1.0/norm(vec4(cross(l2_1, l2_2)))

@@ -21,7 +21,7 @@ configuration = {
     "controller_gain": 4.0,
     "damping": 0.01,
     "alpha": 0.999,  # Soft priority between translation and rotation [0,1] ~1 Translation, ~0 Rotation
-    "use_real_umirobot": False,
+    "use_real_umirobot": True,
     "umirobot_port": "COM3"
 }
 
@@ -90,6 +90,8 @@ def control_loop(umirobot_smr, cfg):
                 if umirobot_smr.is_open():
                     # Get the desired gripper value from VREP
                     gripper_value_d = umirobot_vrep.get_gripper_value_from_vrep()
+                    #need to flip q3 again for some reason
+                    q_out[2] = -q_out[2]
                     # Control the gripper somehow
                     q_temp = np.hstack((q_out, gripper_value_d))
                     # The joint information has to be sent to the robot as a list of integers
