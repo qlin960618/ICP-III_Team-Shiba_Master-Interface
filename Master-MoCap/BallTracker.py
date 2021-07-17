@@ -55,7 +55,7 @@ def main():
     print("Test_main: sending start signal")
     tracker1.set_next_frame()
 
-    for i in range(1000):
+    for i in range(10000):
         if not tracker1.frame_ready(10):
             print("Test_main: getting Frame Timed out")
             tracker1.exit()
@@ -63,8 +63,11 @@ def main():
         tracker1.set_next_frame()
         # pos = tracker1.get_ball_angle(1)
         # print("cnt: %d -- x: %.5f, y: %.5f"%(i, pos[1], pos[2]))
-        pos = tracker1.get_ball_dq_origin_plucker(1)
-        print("Test_main: cnt: %d -- DQ: %s"%(i, str(pos[1])))
+        # pos = tracker1.get_ball_dq_origin_plucker(0)
+        pos = tracker1.get_ball_line_pos(0)
+        # print("Test_main: cnt: %d -- DQ: %s"%(i, str(pos[1])))
+        print("Test_main: cnt: %d : x: %d, y: %d, z:%d"%(i, pos[2],pos[3], pos[1]))
+
     tracker1.exit()
 def main_2instants():
 
@@ -367,7 +370,7 @@ class BallTracker():
         x = self.lensMapX(data[1], data[2])
         y = self.lensMapY(data[1], data[2])
 
-        return data[0], self.gridDistance,  x, y
+        return data[0], self.gridDistance/100.0,  x/1000.0, y/1000.0
 
     """
     - int -- ballID
@@ -382,11 +385,13 @@ class BallTracker():
     def get_ball_dq_origin_plucker(self, i):
 
         data = self.get_ball_line_pos(i)
-        dir = DQ.normalize(DQ([data[2], data[3], data[1]]))
+        pt=DQ([0, data[2], -data[3], data[1]])
+        dir = DQ.normalize(pt)
+        plk = dir + DQ.E * cross(pt, dir)
         #since moment is 0 from origin
         #m = DQ.cross(DQ([0]), dir)
 
-        return data[0], dir# + DQ.E*m
+        return data[0], plk# + DQ.E*m
     """
     - int -- ballID
         - same as above

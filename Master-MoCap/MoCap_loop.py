@@ -43,11 +43,26 @@ def get_closest_point_between_lines(plk_l1, plk_l2):
 
     p1 = (cross(-1.0*m1, cross(l2, cross(l1, l2)))+dot(m2, cross(l1, l2))*l1)*((1.0/linalg.norm(vec4(cross(l1, l2))))**2)
     p2 = (cross(m2, cross(l1, cross(l1, l2)))-dot(m1, cross(l1, l2))*l2)*((1.0/linalg.norm(vec4(cross(l1, l2))))**2)
+    cl12 = cross(l1, l2)
+    pow = inv(norm(DQ(vec4(cl12))))
+    p1 = (cross(-1.0*m1, cross(l2, cl12))+dot(m2, cl12)*l1)*pow*pow
+    p2 = (cross(     m2, cross(l1, cl12))-dot(m1, cl12)*l2)*pow*pow
 
     # Need to do some validation logic here to make sure ball is somewhat calibrated
     valid=True
 
     return vec3(p1), vec3(p2), valid
+
+def get_rik_from_pos(pos2):
+    dir=pos2[0]-pos2[1]
+    if linalg.norm(dir)<0.001:
+        return 0, 0
+
+    i_deg=math.degrees(math.atan2(dir[1],dir[0]))
+    k_deg=math.degrees(math.atan2(dir[2],dir[0]))
+    return i_deg, k_deg
+
+
 
 def master_loop(MasterCommDataArray, eExit, eError, tracker, serialInterface):
 
@@ -96,11 +111,27 @@ def master_loop(MasterCommDataArray, eExit, eError, tracker, serialInterface):
         #     Initialize: ball[2]_pos -- 2x1 vec3
         # ballPos = [np.array([0,0,0]) for i in range(2)]
         #     Initialize: ball[2]_pos_old = None -- 2x1 vec3
-        ballPos_old = [np.array([0,0,0]) for i in range(2)]
-        mocap_pos_zero=np.array([0,0,0])
+        mocapPos_old = [np.array([0,0,0]) for i in range(2)]
+        mocapCurrentZero=np.array([0,0,0])
+        master_on_flag=False
         ######################### Initalize Loop variable   #########################
         ######################### Begin Loop #########################
         while not eExit.is_set() and not eError.is_set():
+
+            ##send previous frame to vrep ..... because of reason ...
+            ###get xd
+            _tmp = xd_component.copy()
+            _tmp[0] += xd_t_offset[0]
+            _tmp[1] += xd_t_offset[1]
+            _tmp[2] += xd_t_offset[2]
+            xd = get_xd_from_trans_rot(*_tmp)
+            # xd = get_xd_from_trans_rot(xd_t_offset[0]+vv[0]/100, xd_t_offset[1]+vv[1]/100,
+            # xd_t_offset[2]+vv[2]/100, vv[3], vv[4], vv[5])
+            ###write to vrep
+            umirobot_vrep.show_xd_in_vrep(x_master_ref*xd)
+            umirobot_vrep.send_gripper_value_to_vrep(gripper_val)
+
+
             # print("gripper val: %.3f"%MasterCommDataArray[0].gripper)
 
             if USE_SECONDARY:
@@ -115,8 +146,11 @@ def master_loop(MasterCommDataArray, eExit, eError, tracker, serialInterface):
 
 
             # copy loop control variable
-            zero_offset = MasterCommDataArray[0].zero_offset
-            master_on = MasterCommDataArray[0].master_on
+            zero_offset_flag = MasterCommDataArray[0].zero_offset
+            master_on2off_flag=master_on_flag and not MasterCommDataArray[0].master_on
+            master_off2on_flag=not master_on_flag and MasterCommDataArray[0].master_on
+            master_on_flag = MasterCommDataArray[0].master_on
+
             #initalize xd_component
             ######################### When Using UI Override
             if MasterCommDataArray[0].xdovrd == 1:
@@ -129,9 +163,13 @@ def master_loop(MasterCommDataArray, eExit, eError, tracker, serialInterface):
                         _factor = 1
                 ##adding loop delay
                 time.sleep(0.1)
-
             ######################### When Using Motion Capture
-            elif zero_offset == 0 and master_on == 1:
+            elif master_on_flag == 1:
+                #trigger on first time turning on
+                if master_off2on_flag:
+                    tracker[0].set_next_frame()
+                    tracker[1].set_next_frame()
+
                 ########## Request Data from frame
                 if not tracker[0].frame_ready(10) or not tracker[1].frame_ready(10):
                     # Camera Broke for some reason
@@ -139,65 +177,93 @@ def master_loop(MasterCommDataArray, eExit, eError, tracker, serialInterface):
                     print("MasterLoop: Camera Broke for some reason")
                     break
 
+                #grab this frame data
                 valid=[True, True]
                 for (i, j) in [(1,0),(0,0),(1,1),(0,1)]:
                     _tmp, plucker_i_from_cam_j[i][j] = tracker[j].get_ball_dq_pov_plucker(i, CAM_POV[j])
                     valid[i] = valid[i] and _tmp
+                ########## Ser to calculate Next Frame
+                tracker[0].set_next_frame()
+                tracker[1].set_next_frame()
 
                 pt10, pt11, val = get_closest_point_between_lines(plucker_i_from_cam_j[1][0],
                             plucker_i_from_cam_j[1][1])
                 pt00, pt01, val = get_closest_point_between_lines(plucker_i_from_cam_j[0][0],
                             plucker_i_from_cam_j[0][1])
-                pt1=(pt10+pt11)/2
-                pt0=(pt00+pt01)/2
-                difPt1=linalg.norm(pt10-pt11)
-                difPt0=linalg.norm(pt00-pt01)
-                # ballPos_old
-                print("Loop Result: %s "%np.array2string(pt0, precision=3, separator=',') , end="")
-                print("distance %.3f"%( difPt0 ))
+                pt=[(pt00+pt01)/2-PT_ZERO, (pt10+pt11)/2-PT_ZERO]
+                difPt=[linalg.norm(pt00-pt01), linalg.norm(pt10-pt11)]
+                valid[0] = valid[0] and difPt[0]<MOCAP_ERROR_THRESHOLD
+                valid[1] = valid[1] and difPt[1]<MOCAP_ERROR_THRESHOLD
 
-                if MasterCommDataArray[0].zero_offset:
-                    mocap_pos_zero=pt0.copy()
-                    ballPos_old = pt0.copy()
+                # mocapPos_old
+                # _, _tmp=tracker[1].get_ball_dq_origin_plucker(0)
+                # print("greenball: %s "%str(_tmp))
+                # print("greenball: %s "%str(plucker_i_from_cam_j[0][0]))
+                # print("green: %s "%np.array2string(pt[0], precision=3, separator=',') , end="")
+                # print("distance %.3f"%( difPt[0] ))
+                # print("red: %s "%np.array2string(pt[1], precision=3, separator=',') , end="")
+                # print("distance %.3f"%( difPt[1] ))
+
+                if zero_offset_flag:
+                    if not valid[BASE_B]:  # the ball is not capture at the initial frame
+                        continue
+                    mocapCurrentZero=pt[BASE_B].copy()
+                    mocapPos_old = [pt[0].copy(), pt[1].copy()]
+                    zero_offset_flag=False
+                    MasterCommDataArray[0].zero_offset = 0
                 else:
                     #use previous if error
-                    if difPt0>MOCAP_ERROR_THRESHOLD or not valid[0]:
-                        pt0 = ballPos_old.copy()
-                    else:
-                        ballPos_old = pt0.copy()
+                    for i in range(2):
+                        if valid[i]:
+                            mocapPos_old[i] = pt[i].copy()
+                        else:
+                            pt[i] = mocapPos_old[i].copy()
+                # print("sdfsdF %s"%str(xd_component))
+                # print("sdfsdF %s"%str(mocapCurrentZero))
+                # print("sdfsdF %s"%str(pt0))
+                #x
+                xd_component[1] = (pt[BASE_B][0]-mocapCurrentZero[0])*MOCAP_MOTION_SCALING
+                #y
+                xd_component[2] = (pt[BASE_B][1]-mocapCurrentZero[1])*MOCAP_MOTION_SCALING
+                #z
+                xd_component[0] = (pt[BASE_B][2]-mocapCurrentZero[2])*MOCAP_MOTION_SCALING
 
+                if valid[0] and valid[1]:
+                    ri, rk = get_rik_from_pos(pt)
+                    xd_component[3]=ri
+                    xd_component[5]=rk
+
+
+                #send xd info back to UI
                 for i in range(3):
-                    xd_component[i] = (mocap_pos_zero[i]-pt0[i])*MOCAP_MOTION_SCALING
+                    MasterCommDataArray[0].xd[i]=xd_component[i]*100
+                MasterCommDataArray[0].xd[3]=xd_component[3]
+                MasterCommDataArray[0].xd[5]=xd_component[5]
+
+            ######################### When Motion Capture just turn off
+            elif master_on2off_flag:
+                print("MasterLoop: Mocap Master turnned of")
+                print(xd_t_offset)
+                print(xd_component)
+                xd_t_offset[0]+=xd_component[0]
+                xd_component[0]=0
+                xd_t_offset[1]+=xd_component[1]
+                xd_component[1]=0
+                xd_t_offset[2]+=xd_component[2]
+                xd_component[2]=0
 
 
 
 
-                ########## Ser to calculate Next Frame
-                tracker[0].set_next_frame()
-                tracker[1].set_next_frame()
-            # else:
-                # xd_component=[0,0,0,0,0,0]
-                # print(vv)
 
-
-            if MasterCommDataArray[0].zero_offset:
+            if zero_offset_flag:
                 for i in range(3):
                     xd_t_offset[i] += xd_component[i]
                     MasterCommDataArray[0].xd[i] = 0
                     xd_component[i]=0
                 MasterCommDataArray[0].zero_offset = 0
 
-            ###get xd
-            _tmp = xd_component.copy()
-            _tmp[0] += xd_t_offset[0]
-            _tmp[1] += xd_t_offset[1]
-            _tmp[2] += xd_t_offset[2]
-            xd = get_xd_from_trans_rot(*_tmp)
-            # xd = get_xd_from_trans_rot(xd_t_offset[0]+vv[0]/100, xd_t_offset[1]+vv[1]/100,
-            # xd_t_offset[2]+vv[2]/100, vv[3], vv[4], vv[5])
-            ###write to vrep
-            umirobot_vrep.show_xd_in_vrep(x_master_ref*xd)
-            umirobot_vrep.send_gripper_value_to_vrep(gripper_val)
+
 
         #########################   End Loop ########################
     except Exception as e:

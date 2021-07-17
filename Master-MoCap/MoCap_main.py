@@ -19,6 +19,8 @@ VREP_ADDRESS = '10.213.113.136'
 BACKEND='py'
 recvPort = 3344 #+1 will be taken also by frontend
 sendPort = 2345 #+1 will be taken also by frontend
+CAM1_ID=0
+CAM2_ID=1
 ############################## program parameter ##############################
 
 ############################## Target Setup ##############################
@@ -36,17 +38,19 @@ INTEPOLER_FILE_NAME = "./camera_config/lens_map.sciobj"
 ############################## Frame Setup ##############################
 #     initialize: camPV_DQ[0,1] //DQ transformation of camera in space
 L=55*0.5/100
-CAM_r1=DQ([math.cos(math.pi/4),0,0,math.sin(math.pi/4)])\
-        *DQ([math.cos(3*math.pi/8),math.sin(3*math.pi/8),0,0])
-CAM_t1=DQ([0, 0, L, 2*L])
+CAM_r1=DQ([math.cos(-3*math.pi/8),0,math.sin(-3*math.pi/8),0])\
+       *DQ([math.cos(-math.pi/4),0,0,math.sin(-math.pi/4)])
+CAM_t1=DQ([0, 0, -L, 0])
 CAM1_POV = CAM_r1+E_*CAM_t1*CAM_r1*0.5
 CAM_r2=DQ([math.cos(3*math.pi/8),math.sin(3*math.pi/8),0,0])
-CAM_t2=DQ([0, L , 2*L,  2*L])
+CAM_t2=DQ([0, -L , 0,  0])
 CAM2_POV = CAM_r2+E_*CAM_t2*CAM_r2*0.5
 CAM_POV = [CAM1_POV, CAM2_POV]
 
-MOCAP_MOTION_SCALING=1.0/3
-MOCAP_ERROR_THRESHOLD=0.1
+MOCAP_MOTION_SCALING=1.0/1
+MOCAP_ERROR_THRESHOLD=0.03
+PT_ZERO=np.array([-L, -L, -L])
+BASE_B=0
 # print(CAM1_POV)
 # print(CAM2_POV)
 ############################## Frame Setup ##############################
@@ -61,8 +65,8 @@ def main():
     #     initialize: hCam[0] = BallTracker(0)
     #     initialize: hCam[1] = BallTracker(1)
     tracker = [None, None]
-    tracker[0]=BallTracker(0, eError, eExit, recvPort, sendPort, backend=BACKEND)
-    tracker[1]=BallTracker(2, eError, eExit, recvPort-1, sendPort-1, backend=BACKEND)
+    tracker[0]=BallTracker(CAM1_ID, eError, eExit, recvPort, sendPort, backend=BACKEND)
+    tracker[1]=BallTracker(CAM2_ID, eError, eExit, recvPort-1, sendPort-1, backend=BACKEND)
 
     if not tracker[0].begin_capture():
         print("MasterMain: Error: with openCV")
@@ -269,7 +273,7 @@ class App():
         self.MasterCommDataArray[0].master_on = self.mocapOnCkboxVar.get()
         if self.mocapOnCkboxVar.get():
             print("Set mocap to on and zero offset")
-            self.toggle_zero_callback()
+            # self.toggle_zero_callback()
 
 
     def ui_after_loop(self):
