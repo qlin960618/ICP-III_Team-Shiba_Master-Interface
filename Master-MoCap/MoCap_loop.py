@@ -2,7 +2,7 @@ from dqrobotics import *
 from scipy.spatial.transform import Rotation
 import math
 import numpy as np
-
+import numpy.linalg as linalg
 
 from BallTracker import BallTracker
 from ctypes import Structure, c_double, c_int, c_bool
@@ -41,13 +41,13 @@ def get_closest_point_between_lines(plk_l1, plk_l2):
     m2 = DQ.D(plk_l2)
     l2 = DQ.P(plk_l2)
 
-    p1 = (cross(-1.0*m1, cross(l2, cross(l1, l2)))+dot(m2, cross(l1, l2))*l1)*pow(1.0/vec4(cross(l1, l2)).norm(), 2)
-    p2 = (cross(m2, cross(l1, cross(l1, l2)))-dot(m1, cross(l1, l2))*l2)*pow(1.0/vec4(cross(l1, l2)).norm(), 2)
+    p1 = (cross(-1.0*m1, cross(l2, cross(l1, l2)))+dot(m2, cross(l1, l2))*l1)*((1.0/linalg.norm(vec4(cross(l1, l2))))**2)
+    p2 = (cross(m2, cross(l1, cross(l1, l2)))-dot(m1, cross(l1, l2))*l2)*((1.0/linalg.norm(vec4(cross(l1, l2))))**2)
 
     # Need to do some validation logic here to make sure ball is somewhat calibrated
     valid=True
 
-    return p1, p2, valid
+    return vec3(p1), vec3(p2), valid
 
 def master_loop(MasterCommDataArray, eExit, eError, tracker, serialInterface):
 
@@ -94,9 +94,10 @@ def master_loop(MasterCommDataArray, eExit, eError, tracker, serialInterface):
         #     initialize: ball[2]_from_cam[2]_DQ -- 2x2 DQ array
         plucker_i_from_cam_j = [[DQ([0]) for j in range(2)]  for i in range(2)]
         #     Initialize: ball[2]_pos -- 2x1 vec3
-        ball_i_pos = [np.array([0,0,0]) for i in range(2)]
+        # ballPos = [np.array([0,0,0]) for i in range(2)]
         #     Initialize: ball[2]_pos_old = None -- 2x1 vec3
-        ball_i_pos_old = [np.array([0,0,0]) for i in range(2)]
+        ballPos_old = [np.array([0,0,0]) for i in range(2)]
+        mocap_pos_zero=np.array([0,0,0])
         ######################### Initalize Loop variable   #########################
         ######################### Begin Loop #########################
         while not eExit.is_set() and not eError.is_set():
@@ -138,15 +139,35 @@ def master_loop(MasterCommDataArray, eExit, eError, tracker, serialInterface):
                     print("MasterLoop: Camera Broke for some reason")
                     break
 
-                _, plucker_i_from_cam_j[1][0] = tracker[0].get_ball_dq_pov_plucker(1, CAM1_POV)
-                _, plucker_i_from_cam_j[0][0] = tracker[0].get_ball_dq_pov_plucker(0, CAM1_POV)
-                _, plucker_i_from_cam_j[1][1] = tracker[1].get_ball_dq_pov_plucker(1, CAM2_POV)
-                _, plucker_i_from_cam_j[0][1] = tracker[1].get_ball_dq_pov_plucker(0, CAM2_POV)
-                pt11, pt12, val = get_closest_point_between_lines(plucker_i_from_cam_j[1][0],
+                valid=[True, True]
+                for (i, j) in [(1,0),(0,0),(1,1),(0,1)]:
+                    _tmp, plucker_i_from_cam_j[i][j] = tracker[j].get_ball_dq_pov_plucker(i, CAM_POV[j])
+                    valid[i] = valid[i] and _tmp
+
+                pt10, pt11, val = get_closest_point_between_lines(plucker_i_from_cam_j[1][0],
                             plucker_i_from_cam_j[1][1])
-                pt01, pt02, val = get_closest_point_between_lines(plucker_i_from_cam_j[0][0],
+                pt00, pt01, val = get_closest_point_between_lines(plucker_i_from_cam_j[0][0],
                             plucker_i_from_cam_j[0][1])
-                print("Loop Result: %s"%(str(pt11)))
+                pt1=(pt10+pt11)/2
+                pt0=(pt00+pt01)/2
+                difPt1=linalg.norm(pt10-pt11)
+                difPt0=linalg.norm(pt00-pt01)
+                # ballPos_old
+                print("Loop Result: %s "%np.array2string(pt0, precision=3, separator=',') , end="")
+                print("distance %.3f"%( difPt0 ))
+
+                if MasterCommDataArray[0].zero_offset:
+                    mocap_pos_zero=pt0.copy()
+                    ballPos_old = pt0.copy()
+                else:
+                    #use previous if error
+                    if difPt0>MOCAP_ERROR_THRESHOLD or not valid[0]:
+                        pt0 = ballPos_old.copy()
+                    else:
+                        ballPos_old = pt0.copy()
+
+                for i in range(3):
+                    xd_component[i] = (mocap_pos_zero[i]-pt0[i])*MOCAP_MOTION_SCALING
 
 
 

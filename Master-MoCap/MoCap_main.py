@@ -12,19 +12,25 @@ from MoCap_loop import *
 
 TEST_ONLY_UI = False
 USE_PHYSICAL_SECONDARY_MASTER = False
-VREP_ADDRESS = '192.168.10.102'
+# VREP_ADDRESS = '192.168.10.102'
+VREP_ADDRESS = '10.213.113.136'
 
 ############################## program parameter ##############################
-BACKEND='cpp'
+BACKEND='py'
 recvPort = 3344 #+1 will be taken also by frontend
 sendPort = 2345 #+1 will be taken also by frontend
 ############################## program parameter ##############################
 
 ############################## Target Setup ##############################
 #in format of Lower H, S, V
-#             Upper H, S, V
-DEFAULT_greenLimit = [[71, 59, 31], [108, 255, 192]]
-DEFAULT_redLimit = [[111, 152, 175], [184, 255, 255]]
+# #             Upper H, S, V
+DEFAULT_greenLimit = [[54, 217, 16], [112, 255, 84]]
+DEFAULT_redLimit = [[156, 154, 80], [198, 255, 176]]
+#in format of Lower R, G, B
+#             Upper R, G, B
+# DEFAULT_greenLimit = [[0, 13, 0], [50, 47, 0]]
+# DEFAULT_redLimit = [[0, 0, 53], [73, 45, 255]]
+
 INTEPOLER_FILE_NAME = "./camera_config/lens_map.sciobj"
 ############################## Target Setup ##############################
 ############################## Frame Setup ##############################
@@ -37,6 +43,10 @@ CAM1_POV = CAM_r1+E_*CAM_t1*CAM_r1*0.5
 CAM_r2=DQ([math.cos(3*math.pi/8),math.sin(3*math.pi/8),0,0])
 CAM_t2=DQ([0, L , 2*L,  2*L])
 CAM2_POV = CAM_r2+E_*CAM_t2*CAM_r2*0.5
+CAM_POV = [CAM1_POV, CAM2_POV]
+
+MOCAP_MOTION_SCALING=1.0/3
+MOCAP_ERROR_THRESHOLD=0.1
 # print(CAM1_POV)
 # print(CAM2_POV)
 ############################## Frame Setup ##############################
@@ -51,9 +61,8 @@ def main():
     #     initialize: hCam[0] = BallTracker(0)
     #     initialize: hCam[1] = BallTracker(1)
     tracker = [None, None]
-    eExitTracker1 = mp.Event()
-    tracker[0]=BallTracker(0, eExitTracker1, recvPort, sendPort, backend=BACKEND)
-    tracker[1]=BallTracker(1, eError, recvPort-1, sendPort-1, backend=BACKEND)
+    tracker[0]=BallTracker(0, eError, eExit, recvPort, sendPort, backend=BACKEND)
+    tracker[1]=BallTracker(2, eError, eExit, recvPort-1, sendPort-1, backend=BACKEND)
 
     if not tracker[0].begin_capture():
         print("MasterMain: Error: with openCV")
@@ -67,7 +76,8 @@ def main():
 
     tracker[0].set_mask_color(DEFAULT_greenLimit, DEFAULT_redLimit)
     tracker[1].set_mask_color(DEFAULT_greenLimit, DEFAULT_redLimit)
-    print("MasterMain: Frame Size: %d x %d"%tracker[0].get_frame_size())
+    print("MasterMain: Frame Size: Cam %d: %d x %d"%(0, *tracker[0].get_frame_size()))
+    print("MasterMain: Frame Size: Cam %d: %d x %d"%(1, *tracker[1].get_frame_size()))
     tracker[0].set_lens_mapping(INTEPOLER_FILE_NAME)
     tracker[1].set_lens_mapping(INTEPOLER_FILE_NAME)
 
@@ -83,9 +93,10 @@ def main():
 
     count=0
     while eError.is_set():
-        time.sleep(0.5)
+        time.sleep(1)
+        print("MasterMain: Waiting...")
         count+=1
-        if count>100:
+        if count>20:
             print("MasterMain: Waiting for camera time out")
             tracker[0].exit()
             tracker[1].exit()
