@@ -31,39 +31,43 @@ def main():
     #             Upper H, S, V
     recvPort = 3344 #+1 will be taken also by frontend
     sendPort = 2345 #+1 will be taken also by frontend
-    DEFAULT_greenLimit = [[71, 59, 31], [108, 144, 78]]
-    DEFAULT_redLimit = [[111, 106, 24], [184, 255, 210]]
 
+    DEFAULT_greenLimit = [[71, 59, 31], [108, 255, 192]]
+    DEFAULT_redLimit = [[111, 152, 175], [184, 255, 255]]
     INTEPOLER_FILE_NAME = "./camera_config/lens_map.sciobj"
     ##### Determined Using the ColorRanger Script
 
     ##event for monitoring error
     eError = mp.Event()
+    eExit = mp.Event()
 
-    tracker1=BallTracker(0, eError, recvPort, sendPort, backend='py')
+    tracker1=BallTracker(2, eError, eExit, recvPort, sendPort, backend='py')
     if not tracker1.begin_capture():
-        print("Error: with openCV")
+        print("Test_main: Error: with openCV")
         exit()
 
     tracker1.set_mask_color(DEFAULT_greenLimit, DEFAULT_redLimit)
-    print("Frame Size: %d x %d"%tracker1.get_frame_size())
+    print("Test_main: Frame Size: %d x %d"%tracker1.get_frame_size())
     tracker1.set_lens_mapping(INTEPOLER_FILE_NAME)
 
-    print("Holding start")
+    print("Test_main: Holding start")
     time.sleep(2)
-    print("sending start signal")
+    print("Test_main: sending start signal")
     tracker1.set_next_frame()
 
-    for i in range(1000):
+    for i in range(10000):
         if not tracker1.frame_ready(10):
-            print("getting Frame Timed out")
+            print("Test_main: getting Frame Timed out")
             tracker1.exit()
             exit()
         tracker1.set_next_frame()
         # pos = tracker1.get_ball_angle(1)
         # print("cnt: %d -- x: %.5f, y: %.5f"%(i, pos[1], pos[2]))
-        pos = tracker1.get_ball_dq_origin_plucker(1)
-        print("cnt: %d -- DQ: %s"%(i, str(pos[1])))
+        # pos = tracker1.get_ball_dq_origin_plucker(0)
+        pos = tracker1.get_ball_line_pos(0)
+        # print("Test_main: cnt: %d -- DQ: %s"%(i, str(pos[1])))
+        print("Test_main: cnt: %d : x: %d, y: %d, z:%d"%(i, pos[2],pos[3], pos[1]))
+
     tracker1.exit()
 def main_2instants():
 
@@ -75,53 +79,79 @@ def main_2instants():
     DEFAULT_redLimit = [[118, 95, 116], [189, 255, 255]]
 
     INTEPOLER_FILE_NAME = "./camera_config/lens_map.sciobj"
+    BACKEND='cpp'
     ##### Determined Using the ColorRanger Script
 
-    ##event for monitoring error
+    tracker = [None, None]
     eError = mp.Event()
+    eExit = mp.Event()
+    tracker[0]=BallTracker(0, eError, eExit, recvPort, sendPort, backend=BACKEND)
+    tracker[1]=BallTracker(1, eError, eExit, recvPort-1, sendPort-1, backend=BACKEND)
 
-    tracker1=BallTracker(0, eError, recvPort, sendPort)
-    tracker2=BallTracker(1, eError, recvPort+1, sendPort+1)
+    if not tracker[0].begin_capture():
+        print("Test_main2: Error: with openCV")
+        tracker[0].exit()
+        return
+    if not tracker[1].begin_capture():
+        print("Test_main2: Error: with openCV")
+        tracker[0].exit()
+        tracker[1].exit()
+        return
 
-    print("Holding start")
     time.sleep(2)
-    print("sending start signal")
+    tracker[0].set_mask_color(DEFAULT_greenLimit, DEFAULT_redLimit)
+    tracker[1].set_mask_color(DEFAULT_greenLimit, DEFAULT_redLimit)
+    print("Test_main2: Frame Size: Cam %d: %d x %d"%(0, *tracker[0].get_frame_size()))
+    print("Test_main2: Frame Size: Cam %d: %d x %d"%(1, *tracker[1].get_frame_size()))
+    tracker[0].set_lens_mapping(INTEPOLER_FILE_NAME)
+    tracker[1].set_lens_mapping(INTEPOLER_FILE_NAME)
 
-    if not tracker1.begin_capture() or not tracker2.begin_capture():
-        print("Error: with openCV")
-        exit()
+    #     //initialize processing of first frame before enter loop
+    #     FOR i in 0,1: //camera
+    #         hCam[i].set_next_frame()
+    #     ENDFOR
+    print("Test_main2: Holding start")
+    print("Test_main2: sending start signal")
+    tracker[0].set_next_frame()
+    tracker[1].set_next_frame()
 
-    tracker1.set_mask_color(DEFAULT_greenLimit, DEFAULT_redLimit)
-    tracker2.set_mask_color(DEFAULT_greenLimit, DEFAULT_redLimit)
-    print("Frame Size: %d x %d"%tracker1.get_frame_size())
-    tracker1.set_lens_mapping(INTEPOLER_FILE_NAME)
-    tracker2.set_lens_mapping(INTEPOLER_FILE_NAME)
+    count=0
+    while eError.is_set():
+        time.sleep(1)
+        print("Test_main2: Waiting...")
+        count+=1
+        if count>20:
+            print("Test_main2: Waiting for camera time out")
+            tracker[0].exit()
+            tracker[1].exit()
+            return
+    ############################## Initialise tracking setup ##############################
 
 
 
     start_t = timeit.default_timer()
     for i in range(100000):
-        tracker1.set_next_frame()
-        tracker2.set_next_frame()
-        if not tracker1.frame_ready(10) or not tracker2.frame_ready(10) or eError.is_set():
-            print("getting Frame Timed out")
-            tracker1.exit()
-            tracker2.exit()
+        tracker[0].set_next_frame()
+        tracker[1].set_next_frame()
+        if not tracker[0].frame_ready(10) or not tracker[1].frame_ready(10) or eError.is_set():
+            print("Test_main2: getting Frame Timed out")
+            tracker[0].exit()
+            tracker[1].exit()
             exit()
         # pos = tracker1.get_ball_angle(1)
         # print("cnt: %d -- x: %.5f, y: %.5f"%(i, pos[1], pos[2]))
-        pos1_1 = tracker1.get_ball_dq_origin_plucker(1)
-        pos2_1 = tracker2.get_ball_dq_origin_plucker(1)
-        pos1_0 = tracker1.get_ball_dq_origin_plucker(0)
-        pos2_0 = tracker2.get_ball_dq_origin_plucker(0)
+        pos1_1 = tracker[0].get_ball_dq_origin_plucker(1)
+        pos2_1 = tracker[1].get_ball_dq_origin_plucker(1)
+        pos1_0 = tracker[0].get_ball_dq_origin_plucker(0)
+        pos2_0 = tracker[1].get_ball_dq_origin_plucker(0)
 
         end_t = timeit.default_timer()
-        print("Program Rate: %.3f"%(1/(end_t-start_t)))
+        print("Test_main2: Program Rate: %.3f"%(1/(end_t-start_t)))
         start_t=end_t
 
         # print("cnt: %d -- DQ: %s | DQ: %s"%(i, str(pos1[1]), str(pos2[1])))
-    tracker1.exit()
-    tracker2.exit()
+    tracker[0].exit()
+    tracker[1].exit()
 
 
 
@@ -129,7 +159,7 @@ def main_2instants():
 class BallTracker():
 
 
-    def __init__(self, cameraID, eError, recvPort, sendPort, backend='cpp'):
+    def __init__(self, cameraID, eError, eExit, recvPort, sendPort, backend='cpp'):
 
         #set backend
         self.backend=backend
@@ -137,21 +167,20 @@ class BallTracker():
             import cv2 as cv
             import imutils
         else:
-            self.sendToIP="localhost"
             #initialize Sending only Socket
-            self.sendSock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             self.recvPort = recvPort
             self.sendPort = sendPort
 
         self.cameraID = cameraID
         self.eError = eError
-        self.ball_0_lowerHSV = [0,0,0]
-        self.ball_0_upperHSV = [0,0,0]
-        self.ball_1_lowerHSV = [0,0,0]
-        self.ball_1_upperHSV = [0,0,0]
+        self.ePause = mp.Event()
+        self.eExit = eExit
+        self.ball_0_lowerVVV = [0,0,0]
+        self.ball_0_upperVVV = [0,0,0]
+        self.ball_1_lowerVVV = [0,0,0]
+        self.ball_1_upperVVV = [0,0,0]
 
         ##IPC objects
-        self.eExit = mp.Event()
         # self.eNextFrame = mp.Event()
         self.pipeData, pipeData2 = mp.Pipe()
         #pip for command, not used when in cpp backend
@@ -159,10 +188,12 @@ class BallTracker():
 
 
         #initialize the Processing thread
-        self.eExit.set()
-        self.pTracker = BallTrackingThreadHandler(cameraID, eError, self.eExit,
-                    sendPort, recvPort, pipeData2, pipeCmd2, self.backend)
+        self.ePause.set()
+        self.pTracker = BallTrackingThreadHandler(cameraID, self.eError,
+                    self.eExit, self.ePause, sendPort,
+                    recvPort, pipeData2, pipeCmd2, self.backend)
         self.pTracker.start()
+
 
         ##initialize Ball 0,1 position
         self.ballPosX = [0, 0]
@@ -180,7 +211,7 @@ class BallTracker():
     """
     def begin_capture(self):
         #signal to start cpp backend
-        self.eExit.clear()
+        self.ePause.clear()
 
         if not self.pipeData.poll(INITIALIZATION_TIMEOUT):
             print("Camera %d timmed-out opening OpenCV"%(self.cameraID))
@@ -201,8 +232,9 @@ class BallTracker():
         if self.backend == 'py':
             self.pipeCmd.send('n')
         else:
-            message=b"n"
-            self.sendSock.sendto(message, (self.sendToIP, self.sendPort))
+            self.pipeCmd.send(b"n")
+
+            # self.sendSock.sendto(message, (self.sendToIP, self.sendPort))
 
 
     """
@@ -211,10 +243,10 @@ class BallTracker():
          set filter color threshold for both ball 1 and 2
     """
     def set_mask_color(self, ball0Limit, ball1Limit):
-        self.ball_0_lowerHSV = ball0Limit[0]
-        self.ball_0_upperHSV = ball0Limit[1]
-        self.ball_1_lowerHSV = ball1Limit[0]
-        self.ball_1_upperHSV = ball1Limit[1]
+        self.ball_0_lowerVVV = ball0Limit[0]
+        self.ball_0_upperVVV = ball0Limit[1]
+        self.ball_1_lowerVVV = ball1Limit[0]
+        self.ball_1_upperVVV = ball1Limit[1]
         self._set_mask_color()
 
     def _set_mask_color(self):
@@ -226,24 +258,24 @@ class BallTracker():
                     msg+=b'\xff'
             return msg
         if self.backend == 'py':
-            self.pipeCmd.send([self.ball_0_lowerHSV,
-                               self.ball_0_upperHSV,
-                               self.ball_1_lowerHSV,
-                               self.ball_1_upperHSV])
+            self.pipeCmd.send([self.ball_0_lowerVVV,
+                               self.ball_0_upperVVV,
+                               self.ball_1_lowerVVV,
+                               self.ball_1_upperVVV])
             print("color: ", end='')
-            print(self.ball_0_lowerHSV, end='')
-            print(self.ball_0_upperHSV, end='')
-            print(self.ball_1_lowerHSV, end='')
-            print(self.ball_1_upperHSV)
+            print(self.ball_0_lowerVVV, end='')
+            print(self.ball_0_upperVVV, end='')
+            print(self.ball_1_lowerVVV, end='')
+            print(self.ball_1_upperVVV)
         else:
             message=b"c:"
-            message = append_3(message, self.ball_0_lowerHSV)
-            message = append_3(message, self.ball_0_upperHSV)
-            message = append_3(message, self.ball_1_lowerHSV)
-            message = append_3(message, self.ball_1_upperHSV)
+            message = append_3(message, self.ball_0_lowerVVV)
+            message = append_3(message, self.ball_0_upperVVV)
+            message = append_3(message, self.ball_1_lowerVVV)
+            message = append_3(message, self.ball_1_upperVVV)
 
             print("color msg: %s"%message)
-            self.sendSock.sendto(message, (self.sendToIP, self.sendPort))
+            self.pipeCmd.send(message)
 
 
     """
@@ -310,7 +342,7 @@ class BallTracker():
         ### Start the next Frame Capture and begin processing right after
         # self.eStartProcessing.set()
 
-    """
+    """pyBackend:
     - int -- ballID
         - The id of the ball to locate. the ID can be hardcoded with color. Ex.
         Green=0, Red=1
@@ -338,7 +370,7 @@ class BallTracker():
         x = self.lensMapX(data[1], data[2])
         y = self.lensMapY(data[1], data[2])
 
-        return data[0], self.gridDistance,  x, y
+        return data[0], self.gridDistance/100.0,  x/1000.0, y/1000.0
 
     """
     - int -- ballID
@@ -353,11 +385,13 @@ class BallTracker():
     def get_ball_dq_origin_plucker(self, i):
 
         data = self.get_ball_line_pos(i)
-        dir = DQ.normalize(DQ([data[2], data[3], data[1]]))
+        pt=DQ([0, data[2], -data[3], data[1]])
+        dir = DQ.normalize(pt)
+        plk = dir + DQ.E * cross(pt, dir)
         #since moment is 0 from origin
         #m = DQ.cross(DQ([0]), dir)
 
-        return data[0], dir# + DQ.E*m
+        return data[0], plk# + DQ.E*m
     """
     - int -- ballID
         - same as above
@@ -369,7 +403,8 @@ class BallTracker():
         be located.
     """
     def get_ball_dq_pov_plucker(self, i, povDQ):
-        return povDQ * self.get_ball_dq_origin(i) * conj(povDQ)
+        data=self.get_ball_dq_origin_plucker(i)
+        return data[0], povDQ * data[1] * conj(povDQ)
 
 
     """
@@ -381,24 +416,26 @@ class BallTracker():
             self.pipeCmd.send('e')
         else:
             message=b"e"
-            self.sendSock.sendto(message, (self.sendToIP, self.sendPort))
-        self.pTracker.join(10)
+            self.pipeCmd.send(message)
+            # self.sendSock.sendto(message, (self.sendToIP, self.sendPort))
+        # self.pTracker.join(10)
         if not self.pTracker.is_alive():
             print("Camera %d Thread Joined"%(self.cameraID))
-        else:
             self.pTracker.terminate()
+        else:
             print("Camera %d Force Terminated"%(self.cameraID))
 
 
 
 class BallTrackingThreadHandler(mp.Process):
-    def __init__(self, cameraID, eError, eExit, sendPort, recvPort,
+    def __init__(self, cameraID, eError, eExit, ePause, sendPort, recvPort,
                  pipeData, pipeCmd, backend='cpp'):
 
         #set processing backend
         self.backend=backend
         # Assigning Variable
         self.cameraID = cameraID
+        self.ePause = ePause
         self.eError = eError
         self.eExit = eExit
         self.sendPort = sendPort
@@ -406,7 +443,7 @@ class BallTrackingThreadHandler(mp.Process):
         self.pipeData = pipeData
         self.pipeCmd = pipeCmd
         ## set error flag before initialized
-        self.eError.set()
+        self.ePause.set()
         ##Launch Process
         super(BallTrackingThreadHandler, self).__init__()
 
@@ -415,14 +452,17 @@ class BallTrackingThreadHandler(mp.Process):
         ####Code section for when using cpp backend
         if self.backend == 'cpp':
             #wait till eExit is cleared to start
-            while self.eExit.is_set():
+            while self.ePause.is_set():
                 time.sleep(0.5)
 
             #setup UDP communication
             recvFromIP = "0.0.0.0"
             self.recvSock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             self.recvSock.bind((recvFromIP, self.recvPort))
+            self.sendToIP="localhost"
+            self.sendSock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
+            print("backend(py): Camera %d: Start cpp process"%(self.cameraID))
             command = ['./BallTrackerThread', "%d"%self.cameraID,
             "-width=%d"%DEFAULT_FRAME_WIDTH,
             "-height=%d"%DEFAULT_FRAME_HEIGHT,
@@ -430,6 +470,7 @@ class BallTrackingThreadHandler(mp.Process):
             "-show=%d"%SHOW_REALTIME]
             trackerProcess = subprocess.Popen(command)
 
+            print("backend(py): Camera %d: get frame info"%(self.cameraID))
             #grab Frame Size information
             data, srcAddr = self.recvSock.recvfrom(100)
             data = data.decode("utf-8")
@@ -440,12 +481,18 @@ class BallTrackingThreadHandler(mp.Process):
             self.pipeData.send([self.vidWidth, self.vidHeight])
 
             #set socket to nonBlocking
-            self.recvSock.setblocking(0)
+            self.recvSock.setblocking(False)
             read_list=[self.recvSock]
 
-            self.eError.clear()
+            self.ePause.clear()
+            print("backend(py): Camera %d: Enter reciv loop"%(self.cameraID))
             while trackerProcess.poll() is None:
-                readable, _, _ = select.select(read_list, [], [])
+                #if there is command send over socket
+                if self.pipeCmd.poll(0):
+                    message=self.pipeCmd.recv()
+                    self.sendSock.sendto(message, (self.sendToIP, self.sendPort))
+
+                readable, _, _ = select.select(read_list, [], [], 0)
                 for s in readable:
                     if s==self.recvSock:
                         data, srcAddr = s.recvfrom(100)
@@ -455,7 +502,7 @@ class BallTrackingThreadHandler(mp.Process):
                         # "err:%d"
                         cell = data.split(":")
                         if(cell[0] == "err"): #recived error code
-                            print("recv Error")
+                            print("backend(py): recv Error")
                             self.eExit.set()
 
                         if(cell[0] == "d" and cell[1] == "%d"%self.cameraID):
@@ -465,12 +512,16 @@ class BallTrackingThreadHandler(mp.Process):
                             self.pipeData.send([[arr[0], arr[1], arr[2]],
                                                 [arr[3], arr[4], arr[5]]])
                 if(self.eExit.is_set()):
-                    print("exit Event set")
-                    self.recvSock.close()
+                    self.sendSock.sendto(b"e", (self.sendToIP, self.sendPort))
+                    print("backend(py): exit Event set")
                     time.sleep(1)
                     trackerProcess.terminate()
                     break;
+
+            print("backend(py): Camera %d: Exiting backend"%(self.cameraID))
             trackerProcess.wait(10)
+            self.recvSock.close()
+            self.sendSock.close()
 
         ##using python Backend
         else:
@@ -478,16 +529,17 @@ class BallTrackingThreadHandler(mp.Process):
             import imutils
 
             #wait till eExit is cleared to start
-            while self.eExit.is_set():
+            while self.ePause.is_set():
                 time.sleep(0.5)
 
             #set color variable
-            ball_0_lowerHSV = [0,0,0]
-            ball_0_upperHSV = [0,0,0]
-            ball_1_lowerHSV = [0,0,0]
-            ball_1_upperHSV = [0,0,0]
+            ball_0_lowerVVV = [0,0,0]
+            ball_0_upperVVV = [0,0,0]
+            ball_1_lowerVVV = [0,0,0]
+            ball_1_upperVVV = [0,0,0]
 
             #camera Initialization
+            print("pyBackend: Camera %d: open device"%(self.cameraID))
             capDev = cv.VideoCapture(self.cameraID)
             capDev.set(cv.CAP_PROP_FRAME_WIDTH, DEFAULT_FRAME_WIDTH)
             capDev.set(cv.CAP_PROP_FRAME_HEIGHT, DEFAULT_FRAME_HEIGHT)
@@ -498,15 +550,19 @@ class BallTrackingThreadHandler(mp.Process):
             #Test capture single Frame
             ret, frame = capDev.read()
             if frame is None or not ret:
-                print("Camera %d: Something Catastrophic Happened in Init"%(self.cameraID))
+                print("pyBackend: Camera %d: Something Catastrophic Happened in Init"%(self.cameraID))
+                # print("pyBackend: Camera %d: "%self.cameraID, end="")
+                # print(capDev.error())
                 capDev.release()
                 self.eError.set()
                 return
 
-            ##Clear Error Flag
-            self.eError.clear()
+            ##Clear ePause Flag
+            self.ePause.clear()
+            # print("dsfljlksf: %s"%str(self.eError.is_set()))
+            # print("dsfljlksf: %s"%str(self.eExit.is_set()))
             ######################### Main Loop #########################
-            while not self.eError.is_set():
+            while not self.eError.is_set() and not self.eExit.is_set():
                 #recive command from main
                 cmd = self.pipeCmd.recv()
 
@@ -516,10 +572,10 @@ class BallTrackingThreadHandler(mp.Process):
                     break
                 elif len(cmd) == 4:
                     #command is color
-                    ball_0_lowerHSV = cmd[0]
-                    ball_0_upperHSV = cmd[1]
-                    ball_1_lowerHSV = cmd[2]
-                    ball_1_upperHSV = cmd[3]
+                    ball_0_lowerVVV = cmd[0]
+                    ball_0_upperVVV = cmd[1]
+                    ball_1_lowerVVV = cmd[2]
+                    ball_1_upperVVV = cmd[3]
                 elif not cmd == 'n':  #didnt recive the next command
                     time.sleep(0.1)
                     continue
@@ -528,19 +584,27 @@ class BallTrackingThreadHandler(mp.Process):
                 ret, frame = capDev.read()
 
                 if frame is None:
-                    print("Camera %d: Something Catastrophic Happened"%(self.cameraID))
+                    print(cv.error())
+                    print("pyBackend: Camera %d: Something Catastrophic Happened"%(self.cameraID))
                     self.eError.set()
                     break
 
                 #######start detection pipeline
                 blurred = cv.GaussianBlur(frame, (11, 11), 0)
-                hsv_frame = cv.cvtColor(blurred, cv.COLOR_BGR2HSV)
-                c_0_mask = cv.inRange(hsv_frame,
-                            (ball_0_lowerHSV[0], ball_0_lowerHSV[1], ball_0_lowerHSV[2]),
-                            (ball_0_upperHSV[0], ball_0_upperHSV[1], ball_0_upperHSV[2]))
-                c_1_mask = cv.inRange(hsv_frame,
-                            (ball_1_lowerHSV[0], ball_1_lowerHSV[1], ball_1_lowerHSV[2]),
-                            (ball_1_upperHSV[0], ball_1_upperHSV[1], ball_1_upperHSV[2]))
+
+
+                ###### if using hsv
+                pre_thrsh_frame = cv.cvtColor(blurred, cv.COLOR_BGR2HSV)
+                ###### if using rgb
+                # pre_thrsh_frame = blurred.copy()
+                ######
+
+                c_0_mask = cv.inRange(pre_thrsh_frame,
+                            (ball_0_lowerVVV[0], ball_0_lowerVVV[1], ball_0_lowerVVV[2]),
+                            (ball_0_upperVVV[0], ball_0_upperVVV[1], ball_0_upperVVV[2]))
+                c_1_mask = cv.inRange(pre_thrsh_frame,
+                            (ball_1_lowerVVV[0], ball_1_lowerVVV[1], ball_1_lowerVVV[2]),
+                            (ball_1_upperVVV[0], ball_1_upperVVV[1], ball_1_upperVVV[2]))
                 c_0_mask = cv.erode(c_0_mask, None, iterations=2)
                 c_0_mask = cv.dilate(c_0_mask, None, iterations=2)
                 c_1_mask = cv.erode(c_1_mask, None, iterations=2)
@@ -596,10 +660,11 @@ class BallTrackingThreadHandler(mp.Process):
                 ###display realtime live view of the camera
                 if SHOW_REALTIME:
                     cv.namedWindow("Camera %d"%(self.cameraID))
-                    cv.imshow("Camera %d"%(self.cameraID), frame)
+                    cv.imshow("Camera %d"%(self.cameraID), cv.resize(frame, (0,0), fx=0.4, fy=0.4))
                     cv.waitKey(1)
                 ## Send all data to main process here
                 self.pipeData.send([ball_0, ball_1])
+            print("pyBackend: Exiting loop")
 
         self.eError.set()
 

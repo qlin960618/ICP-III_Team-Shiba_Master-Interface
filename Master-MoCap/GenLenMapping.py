@@ -8,7 +8,6 @@ from scipy import interpolate
 
 import PIL.Image
 import PIL.ImageTk
-import cv2 as cv
 
 try:
     import cPickle as pickle
@@ -24,7 +23,7 @@ INTEPOLER_FILE_NAME = "./camera_config/lens_map.sciobj"
 INTERPOLORX_FILE_NAME = "./camera_config/lens_mapx.sciobj"
 INTERPOLORY_FILE_NAME = "./camera_config/lens_mapy.sciobj"
 
-LOAD_FROM_SCIOBJ=True
+LOAD_FROM_SCIOBJ=False
 
 if not LOAD_FROM_SCIOBJ:
     with open(CONFIG_FILE_NAME,'r') as f_config:
@@ -54,8 +53,8 @@ if not LOAD_FROM_SCIOBJ:
     beta=np.zeros(GRID_N_POINTS)
 
     for i in range(GRID_N_POINTS):
-        dx = xInd[i]*gridDistance
-        dy = yInd[i]*gridDistance
+        dx = -xInd[i]*gridDistance
+        dy = -yInd[i]*gridDistance
         alpha[i] = dx
         beta[i]  = dy
         # print("ang for X:%d, Y:%d, alp:%.10f, bet:%.10f"%(xInd[i], yInd[i], alpha[i], beta[i]))
@@ -69,7 +68,7 @@ if not LOAD_FROM_SCIOBJ:
     """
     look into perhaps accounting for symmery of the camera
     for alpha - x pixel symmetry
-    for beta - y pixel symmetry    
+    for beta - y pixel symmetry
     """
 
     tosave = [f_alpha, f_beta, gridDistance]
@@ -110,16 +109,18 @@ print(xnew.shape)
 print(ynew.shape)
 print(beta_new.shape)
 
+print("ck1")
 fig = plt.figure(figsize = (10, 7))
 ax = plt.axes(projection ="3d")
 # Creating plot
+print("ck2")
 ax.scatter3D(xnew, ynew, alpha_new, color="blue", marker='.')
 ax.scatter3D(xnew, ynew, beta_new, color="green", marker='.')
 ax.set_xlim(0, 1279)
 ax.set_ylim(0, 719)
 ax.set_xlabel('X pixel position')
 ax.set_ylabel('Y pixel position')
-ax.set_zlabel('Angle (rad)')
+ax.set_zlabel('distance (cm)')
 ax.legend(['Alpha (x)', 'Beta (y)'])
 
 
