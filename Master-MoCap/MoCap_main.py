@@ -16,7 +16,7 @@ USE_PHYSICAL_SECONDARY_MASTER = False
 VREP_ADDRESS = '10.213.113.136'
 
 ############################## program parameter ##############################
-BACKEND='py'
+BACKEND='cpp'
 recvPort = 3344 #+1 will be taken also by frontend
 sendPort = 2345 #+1 will be taken also by frontend
 CAM1_ID=0
@@ -47,7 +47,7 @@ CAM_t2=DQ([0, -L , 0,  0])
 CAM2_POV = CAM_r2+E_*CAM_t2*CAM_r2*0.5
 CAM_POV = [CAM1_POV, CAM2_POV]
 
-MOCAP_MOTION_SCALING=1.0/1
+MOCAP_MOTION_SCALING=1.0/1.5
 MOCAP_ERROR_THRESHOLD=0.03
 PT_ZERO=np.array([-L, -L, -L])
 BASE_B=0
@@ -272,7 +272,11 @@ class App():
              self.mocapOnCkboxVar.set(0)
         self.MasterCommDataArray[0].master_on = self.mocapOnCkboxVar.get()
         if self.mocapOnCkboxVar.get():
-            print("Set mocap to on and zero offset")
+            print("Set mocap to on")
+            self.offsetZeroBtn.config(state='disable')
+        else:
+            self.offsetZeroBtn.config(state='normal')
+
             # self.toggle_zero_callback()
 
 

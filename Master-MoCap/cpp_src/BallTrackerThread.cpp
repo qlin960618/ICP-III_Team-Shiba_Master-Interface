@@ -17,7 +17,7 @@
 #endif
 
 
-#define USE_RGB
+// #define USE_RGB
 
 // Convert to string
 #define SSTR( x ) static_cast< std::ostringstream & >( \
@@ -105,7 +105,7 @@ int main(int argc, char **argv)
     bool show_REALTIME=false;
     if(parser.get<int>("show")>0)
     {
-        std::cout<< "backend: Camera: " << vidSrc << " enable display" <<std::endl;
+        std::cout<< "cppBackend: Camera: " << vidSrc << " enable display" <<std::endl;
         show_REALTIME= true;
     }
 
@@ -118,7 +118,7 @@ int main(int argc, char **argv)
     //////////////////////OPENING SOCKET
     int hSock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
     if (hSock<=0){
-        std::cout << "backend: failled to open socket" << std::endl;
+        std::cout << "cppBackend: failled to open socket" << std::endl;
         return 0;
     }
     sockaddr_in address;
@@ -127,7 +127,7 @@ int main(int argc, char **argv)
     address.sin_port = htons((unsigned short)recvPort);
 
     if( bind(hSock,(const sockaddr*) &address,sizeof(sockaddr_in))<0 ){
-        std::cout << "backend: Failled to bind Socket" <<std::endl;
+        std::cout << "cppBackend: Failled to bind Socket" <<std::endl;
         return 0;
     }
         // std::cout << "socket opened" << std::endl;
@@ -158,7 +158,7 @@ int main(int argc, char **argv)
 
     if(!video.isOpened())
     {
-        std::cout << "backend: Could not read camera:" << vidSrc << std::endl;
+        std::cout << "cppBackend: Could not read camera:" << vidSrc << std::endl;
         return 1;
     }
 
@@ -188,12 +188,12 @@ int main(int argc, char **argv)
 
     try
     {
-        std::cout << "backend: Camera: " << vidSrc << " loop begin" << std::endl;
+        std::cout << "cppBackend: Camera: " << vidSrc << " loop begin" << std::endl;
         while(true)
         {
             if(!video.read(frame))
             {
-                std::cout << "backend: Camera: " << vidSrc << " grab frame failed" <<std::endl;
+                std::cout << "cppBackend: Camera: " << vidSrc << " grab frame failed" <<std::endl;
                 break;
             }
             ball0_detec=0;
@@ -203,8 +203,9 @@ int main(int argc, char **argv)
             //Listen for command and start processing
             int len = recv_udp(hSock, recvBuff, 100);
             if(len>0){
+
                 if (recvBuff[0]=='c' && len>=14){ //set filter Color
-                    std::cout << "backend: Camera: " << vidSrc << " set filter: ";
+                    std::cout << "cppBackend: Camera: " << vidSrc << " set filter: ";
                     for(int k=0; k<12; k++)
                         std::cout << (int)(uint8_t)recvBuff[k+2] << ",";
                     std::cout << std::endl;
@@ -212,9 +213,10 @@ int main(int argc, char **argv)
                     ball_0_high =  cv::Scalar(uint8_t(recvBuff[5]), uint8_t(recvBuff[6]), uint8_t(recvBuff[7]));
                     ball_1_low =   cv::Scalar(uint8_t(recvBuff[8]), uint8_t(recvBuff[9]), uint8_t(recvBuff[10]));
                     ball_1_high =  cv::Scalar(uint8_t(recvBuff[11]), uint8_t(recvBuff[12]), uint8_t(recvBuff[13]));
+
                     continue;
                 }else if(recvBuff[0]=='e'){ //exit program
-                    std::cout << "backend: Camera: " << vidSrc << " exit signal recived"<<std::endl;
+                    std::cout << "cppBackend: Camera: " << vidSrc << " exit signal recived"<<std::endl;
                     break;
                 }else if (recvBuff[0]=='n'){ //process next frame
                     // std::cout << "next Frame"<<std::endl;
@@ -244,6 +246,7 @@ int main(int argc, char **argv)
             cv::findContours(mask_0, cnts_0, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);
             cv::findContours(mask_1, cnts_1, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);
 
+
             if(cnts_0.size()>0){
                 ball0_detec = 1;    //enable detection check
                 int id0 = getMaxAreaCountourID(cnts_0);
@@ -262,6 +265,7 @@ int main(int argc, char **argv)
                 }
 
             }
+
             if(cnts_1.size()>0){
                 ball1_detec = 1;    //enable detection check
                 int id1 = getMaxAreaCountourID(cnts_1);
@@ -299,23 +303,29 @@ int main(int argc, char **argv)
                 // Display frame.
                 cv::resize(frame, frame, cv::Size(DEFAULT_VIDEO_WIDTH/2, DEFAULT_VIDEO_HEIGHT/2));
                 cv::imshow(winTitle, frame);
+
                 // Exit if ESC pressed.
                 int k = cv::waitKey(1);
-                if(k == 27)
-                    std::cout << "backend: Camera: " << vidSrc << " recived Exit from keyboard" <<std::endl;
-                    break;
+                // if(k == 27)
+                    // std::cout << "cppBackend: Camera: " << vidSrc << " recived Exit from keyboard" <<std::endl;
+                    // break;
             }
-        }
+
+         }
+
     }
-    catch(const std::exception&)
+    catch(const std::exception &exc)
     {
-        std::cout << "backend: Camera: " << vidSrc << " exiting on sigterm" <<std::endl;
+        std::cout << "cppBackend: Camera: " << vidSrc << " exiting on sigterm" <<std::endl;
+        std::cout << "cppBackend: Camera: " << vidSrc << " err: " << exc.what() << std::endl;
     }
-    std::cout << "backend: Camera: " << vidSrc << " exiting from cpp Backend" <<std::endl;
+
+    std::cout << "cppBackend: Camera: " << vidSrc << " exiting from cpp Backend" <<std::endl;
     //program exit or error
     len = std::sprintf(sendBuff, "err:%d", vidSrc);
     send_udp(hSock, sendPort, sendBuff, len);
 
     video.release();
+    cv::destroyWindow(winTitle);
     return 0;
 }

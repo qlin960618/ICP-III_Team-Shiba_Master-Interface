@@ -41,7 +41,7 @@ def main():
     eError = mp.Event()
     eExit = mp.Event()
 
-    tracker1=BallTracker(2, eError, eExit, recvPort, sendPort, backend='py')
+    tracker1=BallTracker(1, eError, eExit, recvPort, sendPort, backend='py')
     if not tracker1.begin_capture():
         print("Test_main: Error: with openCV")
         exit()
@@ -54,6 +54,7 @@ def main():
     time.sleep(2)
     print("Test_main: sending start signal")
     tracker1.set_next_frame()
+    time.sleep(20)
 
     for i in range(10000):
         if not tracker1.frame_ready(10):
@@ -419,11 +420,11 @@ class BallTracker():
             self.pipeCmd.send(message)
             # self.sendSock.sendto(message, (self.sendToIP, self.sendPort))
         # self.pTracker.join(10)
-        if not self.pTracker.is_alive():
-            print("Camera %d Thread Joined"%(self.cameraID))
-            self.pTracker.terminate()
-        else:
-            print("Camera %d Force Terminated"%(self.cameraID))
+        # if not self.pTracker.is_alive():
+        #     print("Camera %d Thread Joined"%(self.cameraID))
+        #     self.pTracker.terminate()
+        # else:
+        #     print("Camera %d Force Terminated"%(self.cameraID))
 
 
 
@@ -502,7 +503,7 @@ class BallTrackingThreadHandler(mp.Process):
                         # "err:%d"
                         cell = data.split(":")
                         if(cell[0] == "err"): #recived error code
-                            print("backend(py): recv Error")
+                            print("backend(py): CAM%d recv Error"%(self.cameraID))
                             self.eExit.set()
 
                         if(cell[0] == "d" and cell[1] == "%d"%self.cameraID):
@@ -511,17 +512,17 @@ class BallTrackingThreadHandler(mp.Process):
                                 arr[i]=int(arr[i])
                             self.pipeData.send([[arr[0], arr[1], arr[2]],
                                                 [arr[3], arr[4], arr[5]]])
-                if(self.eExit.is_set()):
-                    self.sendSock.sendto(b"e", (self.sendToIP, self.sendPort))
-                    print("backend(py): exit Event set")
-                    time.sleep(1)
-                    trackerProcess.terminate()
+                if self.eExit.is_set() or self.eError.is_set():
                     break;
 
-            print("backend(py): Camera %d: Exiting backend"%(self.cameraID))
-            trackerProcess.wait(10)
+            self.sendSock.sendto(b"e", (self.sendToIP, self.sendPort))
+            print("backend(py): exit Event set")
+            time.sleep(1)
             self.recvSock.close()
             self.sendSock.close()
+            trackerProcess.terminate()
+            print("backend(py): Camera %d: Exiting backend"%(self.cameraID))
+
 
         ##using python Backend
         else:
