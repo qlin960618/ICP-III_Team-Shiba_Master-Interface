@@ -57,10 +57,15 @@ def get_rik_from_pos(pos2):
     dir=pos2[0]-pos2[1]
     if linalg.norm(dir)<0.001:
         return 0, 0
+    i_rad=math.atan2(dir[1],dir[0]))
+    #new
+    _tmpPOV=DQ([math.cos(-i_rad/2),0,0,math.sin(-i_rad/2)])
+    _neLine = DQ.vec3(_tmpPOV*DQ.normalize(dir)*DQ.conj(povDQ))
+    k_rad=math.atan2(-_neLine[2],_neLine[0])
 
-    i_deg=math.degrees(math.atan2(dir[1],dir[0]))
-    k_deg=math.degrees(math.atan2(dir[2],dir[0]))
-    return i_deg, k_deg
+    #old
+    # k_rad=math.atan2(dir[2],dir[0])
+    return math.degrees(i_rad), math.degrees(k_rad)
 
 
 
