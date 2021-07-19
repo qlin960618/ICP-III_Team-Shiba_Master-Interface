@@ -111,16 +111,20 @@ def master_loop(MasterCommDataArray, eExit, eError, tracker, serialInterface):
 
         ######################### Initalize Loop variable   #########################
         gripper_val = 0
-        xd_t_offset = [0,-0.16,0]
-        xd_component = [0, 0, 0, 0, 0, 0]
+        ################I I think I will break something here...
+        xd_t_offset = np.array([0,-0.16,0], dtype=np.float32)
+        # xd_t_offset = [0,-0.16,0]
+        xd_component = np.array([0, 0, 0, 0, 0, 0], dtype=np.float32)
+        # xd_component = [0, 0, 0, 0, 0, 0]
+
         #     //initialize variables that will be used in loop
         #     initialize: ball[2]_from_cam[2]_DQ -- 2x2 DQ array
         plucker_i_from_cam_j = [[DQ([0]) for j in range(2)]  for i in range(2)]
         #     Initialize: ball[2]_pos -- 2x1 vec3
         # ballPos = [np.array([0,0,0]) for i in range(2)]
         #     Initialize: ball[2]_pos_old = None -- 2x1 vec3
-        mocapPos_old = [np.array([0,0,0]) for i in range(2)]
-        mocapCurrentZero=np.array([0,0,0])
+        mocapPos_old = [np.array([0,0,0], dtype=np.float32) for i in range(2)]
+        mocapCurrentZero=np.array([0,0,0], dtype=np.float32)
         master_on_flag=False
         master_init_clear_flag=True
         ######################### Initalize Loop variable   #########################
