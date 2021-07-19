@@ -291,7 +291,7 @@ class App():
     def ui_after_loop(self):
 
         #check for error state
-        if self.eError.is_set():
+        if self.eError.is_set() or self.eError.is_set():
             self.on_closing()
             return
         #update override information

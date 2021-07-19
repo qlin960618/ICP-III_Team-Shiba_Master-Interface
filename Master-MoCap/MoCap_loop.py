@@ -97,6 +97,8 @@ def master_loop(MasterCommDataArray, eExit, eError, tracker, serialInterface):
             eError.set()
             print("MasterLoop: Vrep Connection Failed")
             shutdown()
+            return
+
         umirobot_vrep = UMIRobotVrepRobot(vrep_interface=vrep_interface)
         ######################### initialize vrep interface #########################
         ######################### Get robot pose info       #########################
