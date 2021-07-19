@@ -28,7 +28,7 @@ rk=atan(-vne_line(3)/vne_line(1));
 %rk=0;
 
 
-t_offset=0.0*k_;
+t_offset=1*k_;
 t_rot=r_ref*(cos(ri/2)+sin(ri/2)*i_)*(cos(rk/2)+sin(rk/2)*k_);
 f_target = t_rot+E_*t_offset*t_rot/2
 figure(1)
