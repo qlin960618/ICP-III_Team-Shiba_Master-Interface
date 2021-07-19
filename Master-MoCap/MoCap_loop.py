@@ -143,10 +143,14 @@ def master_loop(MasterCommDataArray, eExit, eError, tracker, serialInterface):
 
             if USE_SECONDARY:
                 secMasterData = serialInterface.get_data()
-                gripper_val = math.radians(secMasterData[0]/1024.0*180-90)/2
-                MasterCommDataArray[0].gripper = math.degrees(gripper_val)
-                xd_component[4] = secMasterData[1]/1024.0*360-180
+                gripper_val = secMasterData[0]/1024.0*90-45
+                MasterCommDataArray[0].gripper = gripper_val
+                gripper_val=math.radians(gripper_val)
+                xd_component[4] = secMasterData[1]/1024.0*360
                 MasterCommDataArray[0].rot = xd_component[4]
+                master_on_flag = True if secMasterData[5]==1 else False
+                MasterCommDataArray[0].master_on = master_on_flag
+
             else:
                 gripper_val = math.radians(MasterCommDataArray[0].gripper)
                 xd_component[4] = MasterCommDataArray[0].rot

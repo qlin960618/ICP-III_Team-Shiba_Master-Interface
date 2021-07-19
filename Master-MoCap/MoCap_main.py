@@ -11,9 +11,12 @@ import os, sys
 from MoCap_loop import *
 
 TEST_ONLY_UI = False
-USE_PHYSICAL_SECONDARY_MASTER = False
+USE_PHYSICAL_SECONDARY_MASTER = True
+# USE_PHYSICAL_SECONDARY_MASTER = False
+SERIAL_PID = 29987
 # VREP_ADDRESS = '192.168.10.102'
 VREP_ADDRESS = '10.213.113.136'
+# VREP_ADDRESS = '34.85.17.130'
 
 ############################## program parameter ##############################
 BACKEND='cpp'
@@ -157,16 +160,20 @@ class App():
 
         gripperSliderTxt = tk.Label(sliderFrame, text="Gripper Value")
         gripperSliderTxt.grid(row=0, column=0)
+        self.gripperSliderVar = tk.DoubleVar()
         self.gripperSlider = tk.Scale(sliderFrame, from_=-90, to=90,
-                    orient=tk.HORIZONTAL, length=500, resolution=1)
-        self.gripperSlider.set(0)
+                    orient=tk.HORIZONTAL, length=500, resolution=1,
+                    variable=self.gripperSliderVar)
+        self.gripperSliderVar.set(0)
         self.gripperSlider.config(command=self.gripper_slider_callback)
         self.gripperSlider.grid(row=1, column=0)
 
         xdRotSliderTxt = tk.Label(sliderFrame, text="Xd rot Value")
         xdRotSliderTxt.grid(row=2, column=0)
+        self.xdRotSliderVar = tk.DoubleVar()
         self.xdRotSlider = tk.Scale(sliderFrame, from_=0, to=360,
-                    orient=tk.HORIZONTAL, length=500, resolution=1)
+                    orient=tk.HORIZONTAL, length=500, resolution=1,
+                    variable=self.xdRotSliderVar)
         self.xdRotSlider.set(0)
         self.xdRotSlider.config(command=self.xdrot_slider_callback)
         self.xdRotSlider.grid(row=3, column=0)
@@ -236,6 +243,7 @@ class App():
     def gripper_slider_callback(self, val):
         self.MasterCommDataArray[0].gripper = float(val)
         # print("Set gripper val: %.3f"%float(val))
+
     def xdrot_slider_callback(self, val):
         self.MasterCommDataArray[0].rot = float(val)
         # print("Set gripper val: %.3f"%float(val))
@@ -299,6 +307,17 @@ class App():
             for i in range(len(self.xdOvrdTxt_list)):
                 self.xdOvrdSliderVar[i].set(0)
             self.excutePostZero = False
+
+        #check if master is on from switch
+        if USE_PHYSICAL_SECONDARY_MASTER:
+            self.gripperSliderVar.set(self.MasterCommDataArray[0].gripper)
+            self.xdRotSliderVar.set(self.MasterCommDataArray[0].rot)
+            self.gripperSliderVar.set(self.MasterCommDataArray[0].gripper)
+            if self.MasterCommDataArray[0].master_on:
+                self.mocapOnCkboxVar.set(1)
+            else:
+                self.mocapOnCkboxVar.set(0)
+
 
         self.masterWindow.after(50, self.ui_after_loop)
 
