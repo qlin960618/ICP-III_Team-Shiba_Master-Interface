@@ -150,7 +150,10 @@ def master_loop(MasterCommDataArray, eExit, eError, tracker, serialInterface):
                 gripper_val=math.radians(gripper_val)
                 xd_component[4] = secMasterData[1]/1024.0*360
                 MasterCommDataArray[0].rot = xd_component[4]
-                master_on_flag = True if secMasterData[5]==1 else False
+                if secMasterData[5]>0:
+                    master_on_flag = True
+                elif secMasterData[5]<0
+                    master_on_flag = False
                 MasterCommDataArray[0].master_on = master_on_flag
 
             else:
