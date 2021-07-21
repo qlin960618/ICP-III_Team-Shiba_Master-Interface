@@ -16,9 +16,13 @@ import sys, os
 
 
 SERIAL_PID = 29987
-VREP_ADDRESS = '192.168.10.102'
+# VREP_ADDRESS = '192.168.10.102'
 # VREP_ADDRESS = '10.213.113.136'
 # VREP_ADDRESS = '34.85.17.130'
+VREP_ADDRESS = '172.20.10.7'
+
+# VREP_PORT = 1995
+VREP_PORT = 20001
 
 ####program flow control
 LOOP_RATE = 30 #hz
@@ -33,7 +37,7 @@ T_XY_M_SCALING = 1.3
 T_Z_M_SCALING = 1/16.0
 GRIPPER_ANGULAR_RATE=0.5
 
-MOTION_RUNNING_WEIGHT = 0.15
+MOTION_RUNNING_WEIGHT = 0.2
 
 def main():
     # Instantiate a DQ_VrepInterface
@@ -57,7 +61,7 @@ def main():
     try:
         ######################### initialize vrep interface #########################
         vrep_interface = DQ_VrepInterface()
-        if not vrep_interface.connect(VREP_ADDRESS, 20001, 100, 10):
+        if not vrep_interface.connect(VREP_ADDRESS, VREP_PORT, 100, 10):
             # If connection fails, disconnect and throw exception
             vrep_interface.disconnect_all()
             vrep_interface=None
@@ -89,6 +93,7 @@ def main():
         last_time = time.time()
         loop_time_true = 0.001
 
+        print("Loop Start...")
         while True:
             # Master ref to apply pose transform
             x_master_ref = vrep_interface.get_object_pose("x_master_ref")

@@ -41,8 +41,8 @@ def get_closest_point_between_lines(plk_l1, plk_l2):
     m2 = DQ.D(plk_l2)
     l2 = DQ.P(plk_l2)
 
-    p1 = (cross(-1.0*m1, cross(l2, cross(l1, l2)))+dot(m2, cross(l1, l2))*l1)*((1.0/linalg.norm(vec4(cross(l1, l2))))**2)
-    p2 = (cross(m2, cross(l1, cross(l1, l2)))-dot(m1, cross(l1, l2))*l2)*((1.0/linalg.norm(vec4(cross(l1, l2))))**2)
+    # p1 = (cross(-1.0*m1, cross(l2, cross(l1, l2)))+dot(m2, cross(l1, l2))*l1)*((1.0/linalg.norm(vec4(cross(l1, l2))))**2)
+    # p2 = (cross(m2, cross(l1, cross(l1, l2)))-dot(m1, cross(l1, l2))*l2)*((1.0/linalg.norm(vec4(cross(l1, l2))))**2)
     cl12 = cross(l1, l2)
     pow = inv(norm(DQ(vec4(cl12))))
     p1 = (cross(-1.0*m1, cross(l2, cl12))+dot(m2, cl12)*l1)*pow*pow
@@ -90,7 +90,7 @@ def master_loop(MasterCommDataArray, eExit, eError, tracker, serialInterface):
     try:
         ######################### initialize vrep interface #########################
         vrep_interface = DQ_VrepInterface()
-        if not vrep_interface.connect(VREP_ADDRESS, 20001, 100, 10):
+        if not vrep_interface.connect(VREP_ADDRESS, VREP_PORT, 200, 10):
             # If connection fails, disconnect and throw exception
             vrep_interface.disconnect_all()
             vrep_interface=None
@@ -98,6 +98,7 @@ def master_loop(MasterCommDataArray, eExit, eError, tracker, serialInterface):
             print("MasterLoop: Vrep Connection Failed")
             shutdown()
             return
+        print("Checkpoint 1")
 
         umirobot_vrep = UMIRobotVrepRobot(vrep_interface=vrep_interface)
         ######################### initialize vrep interface #########################
@@ -108,6 +109,7 @@ def master_loop(MasterCommDataArray, eExit, eError, tracker, serialInterface):
         umirobot_vrep.show_xd_in_vrep(x_init)
         x_master_ref = vrep_interface.get_object_pose("x_master_ref")
         ######################### Get robot pose info       #########################
+        print("Checkpoint 2")
 
         ######################### Initalize Loop variable   #########################
         gripper_val = 0
@@ -116,6 +118,7 @@ def master_loop(MasterCommDataArray, eExit, eError, tracker, serialInterface):
         # xd_t_offset = [0,-0.16,0]
         xd_component = np.array([0, 0, 0, 0, 0, 0], dtype=np.float32)
         # xd_component = [0, 0, 0, 0, 0, 0]
+        print("Checkpoint 3")
 
         #     //initialize variables that will be used in loop
         #     initialize: ball[2]_from_cam[2]_DQ -- 2x2 DQ array
@@ -156,7 +159,7 @@ def master_loop(MasterCommDataArray, eExit, eError, tracker, serialInterface):
                 MasterCommDataArray[0].rot = xd_component[4]
                 if secMasterData[5]>0:
                     master_on_flag = True
-                elif secMasterData[5]<0
+                elif secMasterData[5]<0:
                     master_on_flag = False
                 MasterCommDataArray[0].master_on = master_on_flag
 
