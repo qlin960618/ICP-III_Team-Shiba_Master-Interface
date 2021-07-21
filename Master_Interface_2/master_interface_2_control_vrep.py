@@ -41,7 +41,7 @@ def master_control_two(pot1, pot2, pot3):
     theta3 = m2 * pot3 + c2
     # Find the rotation transformation DQs
     r1 = cos(theta1 / 2) + sin(theta1 / 2) * i_
-    r2 = cos(theta2 / 2) + sin(theta2 / 2) * -i_
+    r2 = cos(theta2 / 2) + sin(theta2 / 2) * i_
     # Find the translation DQs
     t1 = 1 + 0.5 * E_ * (l1 * -j_)
     t2 = 1 + 0.5 * E_ * (l2 * -j_)
@@ -69,7 +69,7 @@ configuration = {
     "controller_gain": 4.0,
     "damping": 0.01,
     "alpha": 0.999,  # Soft priority between translation and rotation [0,1] ~1 Translation, ~0 Rotation
-    "use_real_umirobot": False,
+    "use_real_umirobot": True,
     "umirobot_port": "COM3"
 }
 
@@ -114,13 +114,20 @@ def control_loop(umirobot_smr, cfg):
         # Control loop (We're going to control it open loop, because that is how we operate the real robot)
         # Initialize q with its initial value
         q = q_init
+        x_master_ref = vrep_interface.get_object_pose("x_master_ref")
+        if cfg["use_real_umirobot"]:
+            q = [0,0,0,0,0]
+
+        umirobot_smr.send_port('COM3')
         while True:
             # Change how you calculate xd
             q1 = umirobot_smr.get_potentiometer_values()
-            x_master_ref = vrep_interface.get_object_pose("x_master_ref")
             if isinstance(q1[0], float):
                 x_master = master_control_two(q1[0], q1[1], q1[2])
                 gripper_qd = gripper_calc(q1[3], q1[4], q1[5])
+            else:
+                x_master = x_master_ref
+                gripper_qd = gripper_calc(0, 0, 0)
 
             # xd = umirobot_vrep.get_xd_from_vrep()
             xd = x_master_ref * x_master
@@ -131,9 +138,8 @@ def control_loop(umirobot_smr, cfg):
             # Update the current joint positions
             q = q + u * sampling_time
             # Manually change last 3 joints
-            q[3] = gripper_qd[0]
-            q[4] = gripper_qd[1]
-            q[5] = gripper_qd[2]
+            # q[3] = gripper_qd[1]
+            # q[4] = gripper_qd[2]
 
             # Update vrep with the new information we have
             umirobot_vrep.send_q_to_vrep(q)
@@ -144,13 +150,16 @@ def control_loop(umirobot_smr, cfg):
             if cfg["use_real_umirobot"]:
                 if umirobot_smr.is_open():
                     # Get the desired gripper value from VREP
-                    gripper_value_d = umirobot_vrep.get_gripper_value_from_vrep()
+                    # gripper_value_d = umirobot_vrep.get_gripper_value_from_vrep()
                     # Control the gripper somehow
-                    q_temp = np.hstack((q, gripper_value_d))
+                    q_temp = np.hstack((q, 0))
                     # The joint information has to be sent to the robot as a list of integers
                     umirobot_smr.send_qd(rad2deg(q_temp).astype(int).tolist())
                 else:
                     raise Exception("UMIRobot port not opened at {}.".format(cfg["umirobot_port"]))
+            else:
+                if umirobot_smr.is_open():
+                    umirobot_smr.send_qd([0,0,0,0,0,0])
 
     except Exception as e:
         print("Exception caught: ", e)
