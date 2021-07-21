@@ -18,10 +18,10 @@ FRAME_TIME = 1.0 / 10
 IM_RESOLUTION = 640
 
 
-CONFIG_FILE_NAME="./camera_config/lens_mapping.txt"
-INTEPOLER_FILE_NAME = "./camera_config/lens_map.sciobj"
-INTERPOLORX_FILE_NAME = "./camera_config/lens_mapx.sciobj"
-INTERPOLORY_FILE_NAME = "./camera_config/lens_mapy.sciobj"
+CONFIG_FILE_NAME="./lens_mapping.txt"
+INTEPOLER_FILE_NAME = "./lens_map.sciobj"
+INTERPOLORX_FILE_NAME = "./lens_mapx.sciobj"
+INTERPOLORY_FILE_NAME = "./lens_mapy.sciobj"
 
 LOAD_FROM_SCIOBJ=False
 
