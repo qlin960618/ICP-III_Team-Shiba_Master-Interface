@@ -21,7 +21,7 @@ GRID_Y_SIZE=11
 GRID_N_POINTS=GRID_X_SIZE*GRID_Y_SIZE
 GRID_DEFAULT_SIZE=5
 
-CONFIG_FILE_NAME="./camera_config/lens_mapping.txt"
+CONFIG_FILE_NAME="./lens_mapping.txt"
 
 
 class FramePreProcessing(Enum):
