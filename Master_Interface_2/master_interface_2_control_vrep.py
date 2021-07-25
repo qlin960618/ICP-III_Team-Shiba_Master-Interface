@@ -19,7 +19,7 @@ from dqrobotics.utils.DQ_Math import rad2deg
 from umirobot_vrep_robot import UMIRobotVrepRobot
 
 
-def master_control_two(pot1, pot2, pot3):
+def master_control_two(pot1, pot2, pot3, pot4, pot5):
     """ This function takes the three potentiometer values from the master interface 2 of the
     unparalleled shibas and calculates the pose transformation of the end effector of the master robot.
     Using that it calculates and returns the unit DQ pose transformation of the target."""
@@ -37,30 +37,32 @@ def master_control_two(pot1, pot2, pot3):
 
     theta1 = m * pot1 + c
     theta2 = -m * pot2 - c
+    theta4 = m * pot4 + c
+    theta5 = m * pot5 + c
+
     # Convert pot3 for vertical translation
     theta3 = m2 * pot3 + c2
     # Find the rotation transformation DQs
     r1 = cos(theta1 / 2) + sin(theta1 / 2) * i_
     r2 = cos(theta2 / 2) + sin(theta2 / 2) * i_
+    r4 = cos(theta4 / 2) + sin(theta4 / 2) * j_
+    r5 = cos(theta5 / 2) + sin(theta5 / 2) * k_
     # Find the translation DQs
     t1 = 1 + 0.5 * E_ * (l1 * -j_)
     t2 = 1 + 0.5 * E_ * (l2 * -j_)
     t3 = 1 + 0.5 * E_ * (theta3 * i_)
     # Find the total pose transformation DQs
-    x_t = 1 * r1 * t1 * r2 * t2 * t3
+    x_t = 1 * r1 * t1 * r2 * t2 * t3 * conj(r1) * conj(r2) * r4 * r5
     # initial pose dq
 
     return x_t
 
 
-def gripper_calc(pot4, pot5, pot6):
+def gripper_calc(pot6):
     "A function to convert the 0-5 V potentiometer values to integer angles in degrees."
-    m3 = 36
-    c3 = -90
-    gripper_qd = [0, 0, 0]
-    gripper_qd[0] = int(36 * pot4 - 90)
-    gripper_qd[1] = int(36 * pot5 - 90)
-    gripper_qd[2] = int(36 * pot6 - 90)
+    m3 = 0.4
+    c3 = -1
+    gripper_qd = int(m3 * pot6 + c3)
 
     return gripper_qd
 
@@ -115,22 +117,21 @@ def control_loop(umirobot_smr, cfg):
         # Initialize q with its initial value
         q = q_init
         x_master_ref = vrep_interface.get_object_pose("x_master_ref")
-        if cfg["use_real_umirobot"]:
-            q = [0,0,0,0,0]
 
         umirobot_smr.send_port('COM3')
         while True:
             # Change how you calculate xd
             q1 = umirobot_smr.get_potentiometer_values()
             if isinstance(q1[0], float):
-                x_master = master_control_two(q1[0], q1[1], q1[2])
-                gripper_qd = gripper_calc(q1[3], q1[4], q1[5])
+                x_master = master_control_two(q1[0], q1[1], q1[2], q1[3], q1[4])
+                gripper_qd = gripper_calc(q1[5])
             else:
                 x_master = x_master_ref
-                gripper_qd = gripper_calc(0, 0, 0)
+                gripper_qd = 0
 
             # xd = umirobot_vrep.get_xd_from_vrep()
             xd = x_master_ref * x_master
+            # umirobot_vrep.send_gripper_value_to_vrep(gripper_qd)
 
             # Solve the quadratic program
             u = umirobot_controller.compute_setpoint_control_signal(q, xd)
@@ -138,8 +139,6 @@ def control_loop(umirobot_smr, cfg):
             # Update the current joint positions
             q = q + u * sampling_time
             # Manually change last 3 joints
-            # q[3] = gripper_qd[1]
-            # q[4] = gripper_qd[2]
 
             # Update vrep with the new information we have
             umirobot_vrep.send_q_to_vrep(q)
@@ -151,8 +150,9 @@ def control_loop(umirobot_smr, cfg):
                 if umirobot_smr.is_open():
                     # Get the desired gripper value from VREP
                     # gripper_value_d = umirobot_vrep.get_gripper_value_from_vrep()
+                    # gripper_value_d = -20
                     # Control the gripper somehow
-                    q_temp = np.hstack((q, 0))
+                    q_temp = np.hstack((q, gripper_calc(q1[5])))
                     # The joint information has to be sent to the robot as a list of integers
                     umirobot_smr.send_qd(rad2deg(q_temp).astype(int).tolist())
                 else:
