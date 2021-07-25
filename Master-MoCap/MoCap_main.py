@@ -17,7 +17,7 @@ SERIAL_PID = 29987
 # VREP_ADDRESS = '192.168.10.102'
 # VREP_ADDRESS = '10.213.113.136'
 # VREP_ADDRESS = '34.85.17.130'
-VREP_ADDRESS = '192.168.137.8'
+VREP_ADDRESS = '192.168.137.163'
 VREP_PORT = 20001
 
 ############################## program parameter ##############################
@@ -56,9 +56,15 @@ MOCAP_MOTION_SCALING=1.0/1.5
 MOCAP_ERROR_THRESHOLD=0.03
 PT_ZERO=np.array([-L, -L, -L])
 BASE_B=0
+
 # print(CAM1_POV)
 # print(CAM2_POV)
 ############################## Frame Setup ##############################
+############################## motion Setup ##############################
+
+MOTION_RUNNING_WEIGHT = 0.2
+############################## motion Setup ##############################
+
 def main():
     masterCommDataLock = mp.Lock()
     MasterCommDataArray = mp.sharedctypes.Array(MasterCommDataStruc, [MasterCommDataStruc()],lock=masterCommDataLock)

@@ -117,6 +117,7 @@ def master_loop(MasterCommDataArray, eExit, eError, tracker, serialInterface):
         xd_t_offset = np.array([0,-0.16,0], dtype=np.float32)
         # xd_t_offset = [0,-0.16,0]
         xd_component = np.array([0, 0, 0, 0, 0, 0], dtype=np.float32)
+        xd_component_history = xd_component.copy()
         # xd_component = [0, 0, 0, 0, 0, 0]
         print("Checkpoint 3")
 
@@ -136,7 +137,9 @@ def master_loop(MasterCommDataArray, eExit, eError, tracker, serialInterface):
 
             ##send previous frame to vrep ..... because of reason ...
             ###get xd
-            _tmp = xd_component.copy()
+            xd_component_history = MOTION_RUNNING_WEIGHT*xd_component +\
+                        (1-MOTION_RUNNING_WEIGHT)*xd_component_history
+            _tmp = xd_component_history.copy()
             _tmp[0] += xd_t_offset[0]
             _tmp[1] += xd_t_offset[1]
             _tmp[2] += xd_t_offset[2]
@@ -282,7 +285,7 @@ def master_loop(MasterCommDataArray, eExit, eError, tracker, serialInterface):
                 if valid[0] and valid[1]:
                     ri, rk = get_rik_from_pos(pt)
                     xd_component[3]=ri
-                    xd_component[5]=rk
+                    xd_component[5]=-rk+45
 
 
                 #send xd info back to UI
