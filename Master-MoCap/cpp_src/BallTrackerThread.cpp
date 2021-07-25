@@ -326,6 +326,7 @@ int main(int argc, char **argv)
     send_udp(hSock, sendPort, sendBuff, len);
 
     video.release();
-    cv::destroyWindow(winTitle);
+    if (show_REALTIME)
+        cv::destroyWindow(winTitle);
     return 0;
 }
