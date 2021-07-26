@@ -20,6 +20,7 @@ from scipy.spatial.transform import Rotation
 DEFAULT_FRAME_HEIGHT = 720
 DEFAULT_FRAME_WIDTH = 1280
 SHOW_REALTIME = True
+# SHOW_REALTIME = False
 
 
 INITIALIZATION_TIMEOUT = 10

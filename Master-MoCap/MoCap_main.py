@@ -17,7 +17,8 @@ SERIAL_PID = 29987
 # VREP_ADDRESS = '192.168.10.102'
 # VREP_ADDRESS = '10.213.113.136'
 # VREP_ADDRESS = '34.85.17.130'
-VREP_ADDRESS = '192.168.137.163'
+# VREP_ADDRESS = '192.168.137.163'
+VREP_ADDRESS = '0.0.0.0'
 VREP_PORT = 20001
 
 ############################## program parameter ##############################
