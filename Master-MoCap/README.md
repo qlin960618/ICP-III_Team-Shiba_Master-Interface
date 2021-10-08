@@ -2,14 +2,28 @@
 # Motion Capture Master Interface
 - [Contents](#contents)
 - [Main Python Script](#main-python-script)
-  * [Capture Target Diagram](#capture-target-diagram)
-  * [Pseudo Code](#pseudo-code-)
+    + [Capture Target Diagram](#capture-target-diagram)
+    + [Pseudo Code:](#pseudo-code-)
 - [Class: BallTracker](#class--balltracker)
   * [Public function definition](#public-function-definition)
+- [Supporting Functions:](#supporting-functions-)
+
+<small><i><a href='http://ecotrust-canada.github.io/markdown-toc/'>Table of contents generated with markdown-toc</a></i></small>
 
 
 ## Contents
-#### 1. [cpp_src](./cpp_src)
+- [cpp_src](./cpp_src)
+
+ Cpp source for BallTracking processing backend. Current implementation communicated with python frontend using socket
+- [Supporting_Files](./Supporting_Files)
+
+ Misc. files include older version of Ball tracker implementation and test scripts.
+ * [ColorRanger.py](./Supporting_Files/ColorRanger.py)
+
+   Test script for testing color filter mask value used in the tracking.
+- [camera_config](./camera_config)
+
+ Camera calibration and mapping scripts. Calibration is required for accurate operation of the tracker. post-calibration, data is stored in lens_map.sciobj and later read on startup of the BallTracker.py
 
 ## Main Python Script
 
